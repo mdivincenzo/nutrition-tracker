@@ -1,0 +1,81 @@
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { redirect } from 'next/navigation'
+import Dashboard from '@/components/Dashboard'
+import Chat from '@/components/Chat'
+
+export default async function DashboardPage() {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!profile) {
+    redirect('/onboarding')
+  }
+
+  const today = new Date().toISOString().split('T')[0]
+
+  const [mealsResult, workoutsResult, weighInResult] = await Promise.all([
+    supabase
+      .from('meals')
+      .select('*')
+      .eq('profile_id', profile.id)
+      .eq('date', today)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('workouts')
+      .select('*')
+      .eq('profile_id', profile.id)
+      .eq('date', today),
+    supabase
+      .from('weigh_ins')
+      .select('*')
+      .eq('profile_id', profile.id)
+      .eq('date', today)
+      .single(),
+  ])
+
+  const meals = mealsResult.data || []
+  const workouts = workoutsResult.data || []
+  const weighIn = weighInResult.data
+
+  const totals = meals.reduce(
+    (acc, meal) => ({
+      calories: acc.calories + (meal.calories || 0),
+      protein: acc.protein + (meal.protein || 0),
+      carbs: acc.carbs + (meal.carbs || 0),
+      fat: acc.fat + (meal.fat || 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  )
+
+  return (
+    <main className="min-h-screen bg-gray-900 text-white">
+      <div className="flex h-screen">
+        {/* Chat Panel */}
+        <div className="w-1/2 border-r border-gray-700 flex flex-col">
+          <Chat profile={profile} />
+        </div>
+
+        {/* Dashboard Panel */}
+        <div className="w-1/2 overflow-y-auto">
+          <Dashboard
+            profile={profile}
+            meals={meals}
+            workouts={workouts}
+            weighIn={weighIn}
+            totals={totals}
+          />
+        </div>
+      </div>
+    </main>
+  )
+}
