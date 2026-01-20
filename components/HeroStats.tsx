@@ -60,22 +60,22 @@ export default function HeroStats({ stats, profile, weighIn }: HeroStatsProps) {
       </div>
 
       {/* Secondary Stats Grid */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="text-center p-3 rounded-xl bg-surface/50">
-          <p className="text-2xl font-semibold">{stats.daysActive}</p>
-          <p className="text-xs text-text-tertiary">Days Active</p>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="text-center p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+          <p className="text-2xl font-semibold text-indigo-400">{stats.daysActive}</p>
+          <p className="text-xs text-text-tertiary mt-0.5">Days Active</p>
         </div>
-        <div className="text-center p-3 rounded-xl bg-surface/50">
-          <p className="text-2xl font-semibold">
+        <div className="text-center p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+          <p className="text-2xl font-semibold text-yellow-400">
             {stats.weeklyAvgCalories !== null ? stats.weeklyAvgCalories : '—'}
           </p>
-          <p className="text-xs text-text-tertiary">Avg Cal/Day</p>
+          <p className="text-xs text-text-tertiary mt-0.5">Avg Cal/Day</p>
         </div>
-        <div className="text-center p-3 rounded-xl bg-surface/50">
-          <p className="text-2xl font-semibold">
+        <div className="text-center p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+          <p className="text-2xl font-semibold text-green-400">
             {stats.weeklyAvgProtein !== null ? `${stats.weeklyAvgProtein}g` : '—'}
           </p>
-          <p className="text-xs text-text-tertiary">Avg Protein</p>
+          <p className="text-xs text-text-tertiary mt-0.5">Avg Protein</p>
         </div>
       </div>
     </div>

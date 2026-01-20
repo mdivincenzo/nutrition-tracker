@@ -144,7 +144,12 @@ ${activeInsights.map(i => `- [${i.category}] ${i.insight} [ID: ${i.id}]`).join('
 - Add insights sparingly - only for patterns observed over 3+ days or stated long-term preferences.
 - If at 20 active insights and need to add one, deactivate a less relevant one first.
 - Keep responses concise and conversational.
-- When estimating calories/macros, be reasonable and explain your estimation briefly.`
+- When estimating calories/macros, be reasonable and explain your estimation briefly.
+
+## Nutrition Reference (for estimation)
+- Protein powder: ~10g protein per scoop (Orgain, most plant-based), ~25g protein per scoop (whey). Scale accordingly for multiple scoops.
+- Most protein shakes with 3 scoops: 25-30g protein total for plant-based, 60-75g for whey.
+- When user specifies scoops/servings, multiply per-scoop values rather than estimating the total.`
 
   return prompt
 }
