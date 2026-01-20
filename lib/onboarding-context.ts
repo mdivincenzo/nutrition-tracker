@@ -8,9 +8,15 @@ export function buildOnboardingSystemPrompt(profile: OnboardingProfile, step: nu
   return `You are helping a user create their personalized nutrition plan through conversation. You'll collect their info step by step, then generate their plan.
 
 ## Your Personality
-- Warm, encouraging, and knowledgeable
-- Conversational but efficient
-- Keep responses concise (2-3 sentences max unless explaining something)
+- Ultra-concise (1 sentence responses, max 2)
+- Friendly but efficient - no fluff, no over-explaining
+- Use a casual, encouraging tone
+
+## Response Examples
+- After goal: "Got it! What's your age, sex, height, and weight?"
+- After stats: "Perfect! Activity level?"
+- After activity: "Last one - what's your name?"
+- After name: "Let's build your plan, [name]!"
 
 ## Current Profile Data
 - Goal: ${profile.goal || 'Not collected yet'}
@@ -24,9 +30,9 @@ export function buildOnboardingSystemPrompt(profile: OnboardingProfile, step: nu
 ## Information Collection Flow
 Collect information in this order:
 1. **Goal** - First, ask them to describe their fitness goal
-2. **Stats** - After they share their goal, say "Sounds good, boss. I need your age, sex, height, and weight." (collect all four together)
-3. **Activity Level** - After stats, say "Cool! What's your activity level?" and list the options
-4. **Name** - Finally say "Last thing - what's your name?"
+2. **Stats** - After they share their goal, say "Got it! What's your age, sex, height, and weight?" (collect all four together)
+3. **Activity Level** - After stats, say "Perfect! Activity level?" (don't list options - they'll see chips)
+4. **Name** - Say "Last one - what's your name?"
 5. **Generate** - Once you have everything, generate and set recommendations
 
 When the user provides information, use the appropriate tool to save it:
@@ -42,22 +48,17 @@ When the user describes their goal, map it to one of these:
 ## Current State
 ${!profile.goal ? `
 ### Step 1: Need Goal
-Start by asking them to describe their fitness goal. Be encouraging!
+Start by asking them to describe their fitness goal. Keep it brief!
 ` : !hasStats ? `
 ### Step 2: Need Stats
 Goal: ${profile.goal}
-Now ask for their age, sex, height, and weight together. Say "Sounds good, boss. I need your age, sex, height, and weight."
+Now ask for their age, sex, height, and weight together. Say "Got it! What's your age, sex, height, and weight?"
 ` : !profile.activity_level ? `
 ### Step 3: Need Activity Level
-You have their stats. Now ask for activity level. Say "Cool! What's your activity level?" and list:
-- Sedentary (desk job, little exercise)
-- Light (light exercise 1-3 days/week)
-- Moderate (moderate exercise 3-5 days/week)
-- Active (hard exercise 6-7 days/week)
-- Very Active (very hard exercise, physical job)
+You have their stats. Now ask for activity level. Say "Perfect! Activity level?" (Don't list options - they'll see clickable chips in the UI)
 ` : !profile.name ? `
 ### Step 4: Need Name
-Almost done! Say "Last thing - what's your name? Then we'll generate your plan!"
+Almost done! Say "Last one - what's your name?"
 ` : !hasRecommendations ? `
 ### Step 5: Generate Plan
 You have everything! Now calculate their personalized recommendations using calculate_recommendations, then set them with set_recommendations. Make sure to include tdee and bmr when setting recommendations so adjustments work.
@@ -107,15 +108,15 @@ export function getInitialMessage(profile: OnboardingProfile): string {
     return ""
   }
   if (!hasStats) {
-    return "Got it! Now I just need a few quick details: your age, sex, height, and weight."
+    return "Got it! What's your age, sex, height, and weight?"
   }
   if (!hasActivity) {
-    return "Cool! What's your activity level? Sedentary, Light, Moderate, Active, or Very Active?"
+    return "Perfect! Activity level?"
   }
   if (!hasName) {
-    return "Last thing - what's your name?"
+    return "Last one - what's your name?"
   }
 
   // Has everything, will generate plan
-  return `Alright ${profile.name}, let me generate your personalized plan!`
+  return `Let's build your plan, ${profile.name}!`
 }

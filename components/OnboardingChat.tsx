@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import { OnboardingProfile } from '@/lib/onboarding-tools'
 import { getInitialMessage } from '@/lib/onboarding-context'
 import ChatMessage from './ChatMessage'
+import OnboardingProgress, { OnboardingStep } from './OnboardingProgress'
+import { ArrowRightIcon } from '@heroicons/react/20/solid'
 
 interface OnboardingChatProps {
   profile: OnboardingProfile
@@ -19,6 +21,14 @@ interface Message {
   content: string
 }
 
+const activityChips = [
+  { value: 'sedentary', label: 'Sedentary', emoji: '🪑' },
+  { value: 'light', label: 'Light', emoji: '🚶' },
+  { value: 'moderate', label: 'Moderate', emoji: '🏃' },
+  { value: 'active', label: 'Active', emoji: '💪' },
+  { value: 'very_active', label: 'Very Active', emoji: '🔥' },
+]
+
 export default function OnboardingChat({
   profile,
   onProfileUpdate,
@@ -30,6 +40,7 @@ export default function OnboardingChat({
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const initializedRef = useRef(false)
   const profileRef = useRef(profile)
   const goalMessageSentRef = useRef(false)
@@ -71,6 +82,7 @@ export default function OnboardingChat({
       sendMessage(initialGoalMessage)
       onGoalMessageSent?.()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialGoalMessage, onGoalMessageSent])
 
   const scrollToBottom = () => {
@@ -176,6 +188,8 @@ export default function OnboardingChat({
       ])
     } finally {
       setIsLoading(false)
+      // Refocus input for continuous typing
+      setTimeout(() => inputRef.current?.focus(), 0)
     }
   }
 
@@ -193,21 +207,81 @@ export default function OnboardingChat({
     profile.start_weight
   )
 
-  // Get contextual placeholder based on what info is needed next (new flow order)
+  // Determine current step for progress indicator
+  const getCurrentStep = (): OnboardingStep => {
+    if (!profile.goal) return 'goal'
+    if (!hasStats) return 'stats'
+    if (!profile.activity_level) return 'activity'
+    if (!profile.name) return 'name'
+    return 'generating'
+  }
+
+  // Dynamic headline based on step
+  const getHeadline = (): string => {
+    const currentStep = getCurrentStep()
+    switch (currentStep) {
+      case 'goal':
+        return 'Tell me your goal'
+      case 'stats':
+        return 'Quick details needed'
+      case 'activity':
+        return 'How active are you?'
+      case 'name':
+        return 'Almost there!'
+      case 'generating':
+        return 'Building your plan...'
+      default:
+        return 'Building your plan'
+    }
+  }
+
+  // Contextual hint text below input
+  const getHint = (): string => {
+    const currentStep = getCurrentStep()
+    switch (currentStep) {
+      case 'goal':
+        return 'Example: "I want to lose 15 pounds and get stronger"'
+      case 'stats':
+        return 'Example: "28, female, 5\'6", 145 lbs"'
+      case 'activity':
+        return 'Pick below or type your own'
+      case 'name':
+        return 'Just your first name is fine!'
+      default:
+        return ''
+    }
+  }
+
+  // Get contextual placeholder based on what info is needed next
   const getPlaceholder = (): string => {
     if (!profile.goal) return "Tell me about your fitness goal..."
-    if (!hasStats) return "Enter your age, sex, height, and weight..."
-    if (!profile.activity_level) return "What's your activity level?"
-    if (!profile.name) return "What's your name?"
+    if (!hasStats) return "Age, sex, height, and weight..."
+    if (!profile.activity_level) return "Type or pick below..."
+    if (!profile.name) return "Your name..."
     return "Type a message..."
   }
 
+  // Show activity chips when on activity step
+  const showActivityChips = hasStats && !profile.activity_level
+
   return (
     <div className="flex flex-col h-full">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
+      {/* Progress indicator */}
+      <div className="px-6 pt-6">
+        <OnboardingProgress currentStep={getCurrentStep()} />
+      </div>
+
+      {/* Dynamic headline */}
+      <div className="text-center py-4">
+        <h2 className="text-xl font-semibold text-text-secondary">
+          {getHeadline()}
+        </h2>
+      </div>
+
+      {/* Compact chat area - only show last 4 messages */}
+      <div className="flex-1 overflow-y-auto px-6 space-y-3">
+        {messages.slice(-4).map((message) => (
+          <ChatMessage key={message.id} message={message} compact />
         ))}
 
         {/* Loading indicator */}
@@ -226,28 +300,53 @@ export default function OnboardingChat({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t border-surface-border">
+      {/* Hero-style input */}
+      <div className="p-6">
         <form onSubmit={handleSubmit}>
-          <div className="flex gap-3">
+          <div className="hero-input-wrapper-sm">
             <input
+              ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={getPlaceholder()}
-              className="input-field"
+              className="hero-input-sm"
               disabled={isLoading}
+              autoFocus
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="btn-primary px-6 whitespace-nowrap"
+              className="hero-submit-sm"
             >
-              Send
+              <ArrowRightIcon className="w-5 h-5" />
             </button>
           </div>
         </form>
 
+        {/* Contextual hint */}
+        {getHint() && (
+          <p className="text-center text-text-tertiary text-sm mt-3">
+            {getHint()}
+          </p>
+        )}
+
+        {/* Activity chips (only when on activity step) */}
+        {showActivityChips && (
+          <div className="flex flex-wrap justify-center gap-2 mt-4">
+            {activityChips.map((chip) => (
+              <button
+                key={chip.value}
+                type="button"
+                onClick={() => sendMessage(chip.value)}
+                className="goal-chip"
+                disabled={isLoading}
+              >
+                {chip.emoji} {chip.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

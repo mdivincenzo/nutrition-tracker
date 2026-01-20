@@ -602,6 +602,153 @@
 }
 
 /* ========================================
+   HERO INPUT - Smaller variant for chat
+   ======================================== */
+
+.hero-input-wrapper-sm {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    var(--accent-indigo),
+    var(--accent-violet),
+    var(--accent-fuchsia),
+    var(--accent-violet),
+    var(--accent-indigo)
+  );
+  background-size: 300% 300%;
+  animation: gradientShift 4s ease infinite;
+  padding: 1.5px;
+  border-radius: 12px;
+}
+
+/* Outer glow */
+.hero-input-wrapper-sm::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  background: inherit;
+  background-size: inherit;
+  animation: inherit;
+  border-radius: 15px;
+  filter: blur(12px);
+  opacity: 0.5;
+  z-index: -1;
+}
+
+.hero-input-sm {
+  width: 100%;
+  padding: 0.875rem 3.5rem 0.875rem 1rem;
+  font-size: 1rem;
+  background: rgba(10, 10, 15, 0.95);
+  border: none;
+  border-radius: 10px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.hero-input-sm::placeholder {
+  color: var(--text-tertiary);
+}
+
+.hero-input-sm:disabled {
+  opacity: 0.7;
+}
+
+.hero-submit-sm {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent-indigo), var(--accent-violet));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.hero-submit-sm:hover:not(:disabled) {
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+}
+
+.hero-submit-sm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ========================================
+   ONBOARDING PROGRESS - Step indicator
+   ======================================== */
+
+.onboarding-progress {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  transition: all 0.2s ease;
+}
+
+.progress-step.completed {
+  background: rgba(52, 211, 153, 0.15);
+  color: var(--success);
+}
+
+.progress-step.current {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--accent-violet);
+  border: 1px solid var(--accent-violet);
+}
+
+.progress-step.pending {
+  color: var(--text-tertiary);
+}
+
+.progress-step-indicator {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.progress-step.completed .progress-step-indicator {
+  background: var(--success);
+  color: white;
+}
+
+.progress-step.current .progress-step-indicator {
+  background: var(--accent-violet);
+  color: white;
+}
+
+.progress-step.pending .progress-step-indicator {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+}
+
+.progress-step-label {
+  font-weight: 500;
+}
+
+/* ========================================
    GOAL CHIPS - Quick Taps
    ======================================== */
 

@@ -26,6 +26,7 @@ export default function Chat({ profile }: ChatProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   const scrollToBottom = () => {
@@ -123,6 +124,8 @@ export default function Chat({ profile }: ChatProps) {
       ])
     } finally {
       setIsLoading(false)
+      // Refocus input for continuous typing
+      setTimeout(() => inputRef.current?.focus(), 0)
     }
   }
 
@@ -157,12 +160,14 @@ export default function Chat({ profile }: ChatProps) {
       <form onSubmit={handleSubmit} className="p-6 border-t border-surface-border">
         <div className="flex gap-3">
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Tell me what you ate, or ask a question..."
             className="input-field"
             disabled={isLoading}
+            autoFocus
           />
           <button
             type="submit"

@@ -7,6 +7,7 @@ interface ChatMessageProps {
     role: 'user' | 'assistant'
     content: string
   }
+  compact?: boolean
 }
 
 // Extract the last paragraph if it's a question (CTA)
@@ -34,20 +35,31 @@ function extractCTA(content: string): { mainContent: string; cta: string | null 
   return { mainContent: content, cta: null }
 }
 
-export default function ChatMessage({ message }: ChatMessageProps) {
+export default function ChatMessage({ message, compact = false }: ChatMessageProps) {
   const isUser = message.role === 'user'
 
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[80%] chat-bubble-user">
+        <div className={`chat-bubble-user ${compact ? 'max-w-[85%]' : 'max-w-[80%]'}`}>
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
         </div>
       </div>
     )
   }
 
-  // Assistant messages: full width, no bubble, larger text
+  // Compact mode: use bubble style for assistant messages too
+  if (compact) {
+    return (
+      <div className="flex justify-start">
+        <div className="max-w-[85%] chat-bubble-assistant">
+          <p className="whitespace-pre-wrap leading-relaxed text-text-secondary">{message.content}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Standard mode: Assistant messages full width, no bubble, larger text
   const { mainContent, cta } = extractCTA(message.content)
 
   return (
