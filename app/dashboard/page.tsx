@@ -4,7 +4,11 @@ import Dashboard from '@/components/Dashboard'
 import Chat from '@/components/Chat'
 import { calculateHeroStats } from '@/lib/stats'
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams: { date?: string }
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const supabase = createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -23,24 +27,25 @@ export default async function DashboardPage() {
   }
 
   const today = new Date().toISOString().split('T')[0]
+  const selectedDate = searchParams.date || today
 
   const [mealsResult, workoutsResult, weighInResult] = await Promise.all([
     supabase
       .from('meals')
       .select('*')
       .eq('profile_id', profile.id)
-      .eq('date', today)
+      .eq('date', selectedDate)
       .order('created_at', { ascending: true }),
     supabase
       .from('workouts')
       .select('*')
       .eq('profile_id', profile.id)
-      .eq('date', today),
+      .eq('date', selectedDate),
     supabase
       .from('weigh_ins')
       .select('*')
       .eq('profile_id', profile.id)
-      .eq('date', today)
+      .eq('date', selectedDate)
       .single(),
   ])
 
@@ -82,6 +87,7 @@ export default async function DashboardPage() {
             weighIn={weighIn}
             totals={totals}
             heroStats={heroStats}
+            selectedDate={selectedDate}
           />
         </div>
       </div>

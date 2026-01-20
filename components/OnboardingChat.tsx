@@ -4,8 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { OnboardingProfile } from '@/lib/onboarding-tools'
 import { getInitialMessage } from '@/lib/onboarding-context'
 import ChatMessage from './ChatMessage'
-import GoalButtons from './GoalButtons'
-import PlanCard from './PlanCard'
 
 interface OnboardingChatProps {
   profile: OnboardingProfile
@@ -23,7 +21,6 @@ export default function OnboardingChat({ profile, onProfileUpdate, step }: Onboa
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [adjustmentWarning, setAdjustmentWarning] = useState<string | undefined>()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const initializedRef = useRef(false)
   const profileRef = useRef(profile)
@@ -33,9 +30,9 @@ export default function OnboardingChat({ profile, onProfileUpdate, step }: Onboa
     profileRef.current = profile
   }, [profile])
 
-  // Initialize with welcome message when entering step 2
+  // Initialize with welcome message when entering step 1 (chat-first flow)
   useEffect(() => {
-    if (step === 2 && !initializedRef.current) {
+    if (step === 1 && !initializedRef.current) {
       initializedRef.current = true
       const welcomeMessage = getInitialMessage(profile)
       setMessages([
@@ -68,7 +65,6 @@ export default function OnboardingChat({ profile, onProfileUpdate, step }: Onboa
     setMessages((prev) => [...prev, userMessage])
     setInput('')
     setIsLoading(true)
-    setAdjustmentWarning(undefined)
 
     try {
       // Prepare chat history for API
@@ -160,97 +156,23 @@ export default function OnboardingChat({ profile, onProfileUpdate, step }: Onboa
     await sendMessage(input)
   }
 
-  const handleGoalSelect = async (message: string) => {
-    await sendMessage(message)
+  // Check if stats are complete
+  const hasStats = !!(
+    profile.age &&
+    profile.sex &&
+    profile.height_feet !== null &&
+    profile.height_inches !== null &&
+    profile.start_weight
+  )
+
+  // Get contextual placeholder based on what info is needed next (new flow order)
+  const getPlaceholder = (): string => {
+    if (!profile.goal) return "🎯 Describe your fitness goal..."
+    if (!hasStats) return "📊 Enter your age, sex, height, and weight..."
+    if (!profile.activity_level) return "🏃 Enter your activity level..."
+    if (!profile.name) return "👋 Enter your name..."
+    return "Type a message..."
   }
-
-  const handleAdjustPlan = async (direction: 'more_aggressive' | 'more_conservative') => {
-    if (isLoading || !profile.daily_calories || !profile.tdee || !profile.bmr) return
-
-    setIsLoading(true)
-    setAdjustmentWarning(undefined)
-
-    try {
-      const response = await fetch('/api/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: direction === 'more_aggressive'
-            ? 'Make my plan more aggressive'
-            : 'Make my plan more conservative',
-          profile: profileRef.current,
-          step,
-          messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to adjust plan')
-      }
-
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-
-      if (!reader) {
-        throw new Error('No reader available')
-      }
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: '',
-      }
-
-      setMessages((prev) => [...prev, assistantMessage])
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') {
-              continue
-            }
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.content) {
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMessage.id
-                      ? { ...msg, content: msg.content + parsed.content }
-                      : msg
-                  )
-                )
-              }
-              if (parsed.profileUpdate) {
-                onProfileUpdate(parsed.profileUpdate)
-              }
-              if (parsed.warning) {
-                setAdjustmentWarning(parsed.warning)
-              }
-            } catch {
-              // Ignore parse errors for incomplete chunks
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Plan adjustment error:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Determine if we should show goal buttons (after first message, before goal is set)
-  const showGoalButtons = messages.length === 1 && !profile.goal && !isLoading
-
-  // Determine if we should show the plan card
-  const showPlanCard = !!(profile.daily_calories && profile.daily_protein)
 
   return (
     <div className="flex flex-col h-full">
@@ -273,16 +195,6 @@ export default function OnboardingChat({ profile, onProfileUpdate, step }: Onboa
           </div>
         )}
 
-        {/* Plan card appears when recommendations are set */}
-        {showPlanCard && (
-          <PlanCard
-            profile={profile}
-            onAdjust={handleAdjustPlan}
-            isAdjusting={isLoading}
-            warning={adjustmentWarning}
-          />
-        )}
-
         <div ref={messagesEndRef} />
       </div>
 
@@ -294,7 +206,7 @@ export default function OnboardingChat({ profile, onProfileUpdate, step }: Onboa
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={showGoalButtons ? "Describe your fitness goal..." : "Type a message..."}
+              placeholder={getPlaceholder()}
               className="input-field"
               disabled={isLoading}
             />
@@ -308,10 +220,6 @@ export default function OnboardingChat({ profile, onProfileUpdate, step }: Onboa
           </div>
         </form>
 
-        {/* Goal buttons appear at bottom, below input */}
-        {showGoalButtons && (
-          <GoalButtons onGoalSelect={handleGoalSelect} disabled={isLoading} />
-        )}
       </div>
     </div>
   )

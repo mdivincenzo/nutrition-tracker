@@ -4,6 +4,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 export interface OnboardingProfile {
   name: string | null
   age: number | null
+  sex: 'male' | 'female' | null
   height_feet: number | null
   height_inches: number | null
   start_weight: number | null
@@ -24,7 +25,7 @@ export interface OnboardingProfile {
 export const onboardingToolDefinitions: Anthropic.Tool[] = [
   {
     name: 'update_profile_field',
-    description: 'Update a field in the user\'s profile. Use this to save information as the user shares it.',
+    description: 'Update a single field in the user\'s profile. Use this to save information as the user shares it.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -39,6 +40,37 @@ export const onboardingToolDefinitions: Anthropic.Tool[] = [
         },
       },
       required: ['field', 'value'],
+    },
+  },
+  {
+    name: 'update_stats',
+    description: 'Update age, sex, height, and weight all at once. Use this when the user provides their stats together (e.g., "33, male, 5\'10, 184 lbs").',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        age: {
+          type: 'number',
+          description: 'Age in years',
+        },
+        sex: {
+          type: 'string',
+          enum: ['male', 'female'],
+          description: 'Biological sex (male or female)',
+        },
+        height_feet: {
+          type: 'number',
+          description: 'Height feet component (e.g., 5 for 5\'10")',
+        },
+        height_inches: {
+          type: 'number',
+          description: 'Height inches component (e.g., 10 for 5\'10")',
+        },
+        weight: {
+          type: 'number',
+          description: 'Weight in pounds',
+        },
+      },
+      required: ['age', 'sex', 'height_feet', 'height_inches', 'weight'],
     },
   },
   {
@@ -427,6 +459,24 @@ export async function executeOnboardingTool(
 
       setProfile(updates)
       return `Updated ${field} to ${value}`
+    }
+
+    case 'update_stats': {
+      const age = input.age as number
+      const sex = input.sex as 'male' | 'female'
+      const heightFeet = input.height_feet as number
+      const heightInches = input.height_inches as number
+      const weight = input.weight as number
+
+      setProfile({
+        age,
+        sex,
+        height_feet: heightFeet,
+        height_inches: heightInches,
+        start_weight: weight,
+      })
+
+      return `Updated stats: age ${age}, sex ${sex}, height ${heightFeet}'${heightInches}", weight ${weight} lbs`
     }
 
     case 'calculate_recommendations': {

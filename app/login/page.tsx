@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { OnboardingProfile, saveOnboardingProfile } from '@/lib/onboarding-tools'
+
+const STORAGE_KEY = 'onboarding_profile'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -24,7 +27,7 @@ export default function Login() {
     setLoading(true)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -32,10 +35,39 @@ export default function Login() {
     if (error) {
       setError(error.message)
       setLoading(false)
-    } else {
-      router.push('/dashboard')
-      router.refresh()
+      return
     }
+
+    // Check if user has a profile
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('name, daily_calories')
+      .eq('user_id', data.user.id)
+      .single()
+
+    // If no profile, check if we have onboarding data to save
+    if (!existingProfile?.name || !existingProfile?.daily_calories) {
+      const stored = sessionStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        try {
+          const profile: OnboardingProfile = JSON.parse(stored)
+          if (profile.daily_calories && profile.daily_protein && profile.name) {
+            const result = await saveOnboardingProfile(profile, data.user.id, supabase)
+            if (result.success) {
+              sessionStorage.removeItem(STORAGE_KEY)
+              router.push('/dashboard')
+              router.refresh()
+              return
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    }
+
+    router.push('/dashboard')
+    router.refresh()
   }
 
   const handleGoogleLogin = async () => {

@@ -371,6 +371,150 @@
   }
 }
 
+/* React Day Picker v9 styles */
+.rdp-root {
+  --rdp-cell-size: 36px;
+  margin: 0;
+}
+
+.rdp-months {
+  display: flex;
+  flex-direction: column;
+}
+
+.rdp-month {
+  margin: 0;
+}
+
+.rdp-month_caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.5rem;
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.rdp-caption_label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rdp-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  position: absolute;
+  width: 100%;
+  justify-content: space-between;
+  padding: 0 0.25rem;
+}
+
+.rdp-button_previous,
+.rdp-button_next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.rdp-button_previous:hover,
+.rdp-button_next:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.rdp-month_grid {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rdp-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, var(--rdp-cell-size));
+  margin-bottom: 0.5rem;
+}
+
+.rdp-weekday {
+  width: var(--rdp-cell-size);
+  height: var(--rdp-cell-size);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rdp-weeks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rdp-week {
+  display: grid;
+  grid-template-columns: repeat(7, var(--rdp-cell-size));
+}
+
+.rdp-day {
+  width: var(--rdp-cell-size);
+  height: var(--rdp-cell-size);
+  text-align: center;
+  padding: 0;
+}
+
+.rdp-day_button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+}
+
+.rdp-day_button:hover {
+  background: var(--surface-hover);
+}
+
+.rdp-today .rdp-day_button {
+  background: var(--surface);
+  font-weight: 600;
+}
+
+.rdp-selected .rdp-day_button {
+  background: var(--accent-violet) !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.rdp-outside .rdp-day_button {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.rdp-disabled .rdp-day_button {
+  color: var(--text-tertiary);
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 /* Utility classes */
 @layer utilities {
   .animate-float {

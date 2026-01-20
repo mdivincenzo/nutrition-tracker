@@ -1,40 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { onboardingToolDefinitions, executeOnboardingTool, OnboardingProfile } from '@/lib/onboarding-tools'
 import { buildOnboardingSystemPrompt } from '@/lib/onboarding-context'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
-
-function createSupabaseClient() {
-  const cookieStore = cookies()
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value, ...options })
-          } catch {
-            // Ignore
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch {
-            // Ignore
-          }
-        },
-      },
-    }
-  )
-}
 
 export async function POST(request: Request) {
   try {
@@ -49,13 +18,8 @@ export async function POST(request: Request) {
       return new Response('Missing message', { status: 400 })
     }
 
-    const supabase = createSupabaseClient()
-
-    // Verify user is authenticated
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return new Response('Unauthorized', { status: 401 })
-    }
+    // Note: Onboarding API is now public since it runs before user signup
+    // Profile data is stored in sessionStorage on the client until signup
 
     // Build the system prompt based on current state
     const systemPrompt = buildOnboardingSystemPrompt(profile, step)

@@ -56,9 +56,8 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protected routes - require authentication
-  if (request.nextUrl.pathname.startsWith('/dashboard') ||
-      request.nextUrl.pathname.startsWith('/onboarding')) {
+  // Protected routes - require authentication (except root which handles its own auth check)
+  if (request.nextUrl.pathname.startsWith('/dashboard')) {
     if (!user) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
@@ -77,9 +76,9 @@ export async function middleware(request: NextRequest) {
       .eq('user_id', user.id)
       .single()
 
-    // If no profile or profile is incomplete, redirect to onboarding
+    // If no profile or profile is incomplete, redirect to root (onboarding)
     if (!profile || !profile.name || !profile.daily_calories) {
-      return NextResponse.redirect(new URL('/onboarding', request.url))
+      return NextResponse.redirect(new URL('/', request.url))
     }
   }
 
@@ -87,5 +86,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/onboarding/:path*', '/login', '/signup'],
+  matcher: ['/dashboard/:path*', '/login', '/signup'],
 }

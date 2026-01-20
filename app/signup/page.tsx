@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { OnboardingProfile, saveOnboardingProfile } from '@/lib/onboarding-tools'
+
+const STORAGE_KEY = 'onboarding_profile'
 
 export default function SignUp() {
   const [email, setEmail] = useState('')
@@ -30,7 +33,7 @@ export default function SignUp() {
     setLoading(true)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -41,9 +44,33 @@ export default function SignUp() {
     if (error) {
       setError(error.message)
       setLoading(false)
-    } else {
-      router.push('/onboarding')
+      return
     }
+
+    // Check if we have onboarding data to save
+    const stored = sessionStorage.getItem(STORAGE_KEY)
+    if (stored && data.user) {
+      try {
+        const profile: OnboardingProfile = JSON.parse(stored)
+        // Only save if we have complete onboarding data
+        if (profile.daily_calories && profile.daily_protein && profile.name) {
+          const result = await saveOnboardingProfile(profile, data.user.id, supabase)
+          if (result.success) {
+            // Clear sessionStorage after successful save
+            sessionStorage.removeItem(STORAGE_KEY)
+            router.push('/dashboard')
+            router.refresh()
+            return
+          }
+        }
+      } catch {
+        // Ignore parse errors, continue to default flow
+      }
+    }
+
+    // No onboarding data or incomplete, go to root to complete onboarding
+    router.push('/')
+    router.refresh()
   }
 
   const handleGoogleSignUp = async () => {

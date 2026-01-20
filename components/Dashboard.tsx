@@ -6,6 +6,9 @@ import { createClient } from '@/lib/supabase'
 import MacroProgress from './MacroProgress'
 import MealsList from './MealsList'
 import HeroStats from './HeroStats'
+import DateNavigation from './DateNavigation'
+import WorkoutSummary from './WorkoutSummary'
+import { parseISO, isToday } from 'date-fns'
 
 interface DashboardProps {
   profile: Profile
@@ -14,15 +17,13 @@ interface DashboardProps {
   weighIn: WeighIn | null
   totals: DailyTotals
   heroStats: HeroStatsType
+  selectedDate: string
 }
 
-export default function Dashboard({ profile, meals, workouts, weighIn, totals, heroStats }: DashboardProps) {
+export default function Dashboard({ profile, meals, workouts, weighIn, totals, heroStats, selectedDate }: DashboardProps) {
   const router = useRouter()
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  })
+  const currentDate = parseISO(selectedDate)
+  const isTodaySelected = isToday(currentDate)
 
   const handleResetProfile = async () => {
     if (!confirm('This will delete your profile and all data. You will be redirected to onboarding. Continue?')) {
@@ -49,7 +50,9 @@ export default function Dashboard({ profile, meals, workouts, weighIn, totals, h
     <div className="p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-semibold tracking-tight">Hey, {profile.name}</h1>
-        <p className="text-text-secondary mt-1">{today}</p>
+        <div className="mt-3">
+          <DateNavigation selectedDate={selectedDate} />
+        </div>
       </header>
 
       {/* Hero Stats */}
@@ -59,7 +62,9 @@ export default function Dashboard({ profile, meals, workouts, weighIn, totals, h
 
       {/* Macro Progress */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold tracking-tight mb-4">Today&apos;s Progress</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-4">
+          {isTodaySelected ? "Today's Progress" : "Progress"}
+        </h2>
         <div className="space-y-4">
           <MacroProgress
             label="Calories"
@@ -99,8 +104,12 @@ export default function Dashboard({ profile, meals, workouts, weighIn, totals, h
           <MealsList meals={meals} />
         ) : (
           <div className="glass-card p-6 text-center">
-            <p className="text-text-secondary">No meals logged yet today.</p>
-            <p className="text-text-tertiary text-sm mt-1">Tell Claude what you ate!</p>
+            <p className="text-text-secondary">
+              {isTodaySelected ? "No meals logged yet today." : "No meals logged for this day."}
+            </p>
+            {isTodaySelected && (
+              <p className="text-text-tertiary text-sm mt-1">Tell Claude what you ate!</p>
+            )}
           </div>
         )}
       </div>
@@ -108,36 +117,7 @@ export default function Dashboard({ profile, meals, workouts, weighIn, totals, h
       {/* Workouts */}
       <div>
         <h2 className="text-xl font-semibold tracking-tight mb-4">Workouts</h2>
-        {workouts.length > 0 ? (
-          <div className="space-y-3">
-            {workouts.map((workout) => (
-              <div key={workout.id} className="glass-card p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="font-medium">{workout.exercise}</span>
-                    {workout.type && (
-                      <span className="ml-2 badge capitalize">
-                        {workout.type}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="text-sm text-text-secondary mt-2">
-                  {workout.duration_minutes && `${workout.duration_minutes} min`}
-                  {workout.sets && workout.reps && ` • ${workout.sets}x${workout.reps}`}
-                  {workout.rpe && ` • RPE ${workout.rpe}`}
-                </div>
-                {workout.notes && (
-                  <p className="text-sm text-text-tertiary mt-2">{workout.notes}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="glass-card p-6 text-center">
-            <p className="text-text-secondary">No workouts logged yet today.</p>
-          </div>
-        )}
+        <WorkoutSummary workouts={workouts} isTodaySelected={isTodaySelected} />
       </div>
 
       {/* Dev Tools - only in development */}
