@@ -180,6 +180,14 @@
     border: 1px solid var(--surface-border);
   }
 
+  /* Call-to-action question styling */
+  .cta-question {
+    @apply mt-4;
+  }
+  .cta-question p {
+    @apply text-white font-semibold;
+  }
+
   /* Badge */
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
@@ -315,6 +323,51 @@
   }
   66% {
     transform: translateY(5px) rotate(-1deg);
+  }
+}
+
+/* Prose markdown styling for chat */
+@layer components {
+  .prose {
+    @apply text-text-primary leading-relaxed;
+    font-size: 1rem;
+  }
+  .prose table {
+    @apply w-full border-collapse my-6;
+  }
+  .prose thead {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .prose th {
+    @apply px-4 py-3 text-left font-semibold text-text-primary;
+  }
+  .prose td {
+    @apply px-4 py-3 text-left text-text-secondary;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .prose tr:last-child td {
+    border-bottom: none;
+  }
+  .prose strong {
+    @apply text-white font-semibold;
+  }
+  .prose p {
+    @apply my-3 text-text-secondary;
+  }
+  .prose h2 {
+    @apply text-xl font-semibold text-text-primary mt-6 mb-4;
+  }
+  .prose h3 {
+    @apply text-lg font-semibold text-text-primary mt-5 mb-3;
+  }
+  .prose ul, .prose ol {
+    @apply my-4 pl-6 text-text-secondary;
+  }
+  .prose li {
+    @apply my-2;
+  }
+  .prose li::marker {
+    @apply text-text-tertiary;
   }
 }
 
