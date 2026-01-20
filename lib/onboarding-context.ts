@@ -102,11 +102,12 @@ export function getInitialMessage(profile: OnboardingProfile): string {
   const hasName = !!profile.name
 
   // Resume from where they left off
+  // Fresh users (no goal) - the landing page handles the prompt, no message needed
   if (!hasGoal) {
-    return "Hey! 👋 Tell me about your fitness goal - what are you hoping to achieve?"
+    return ""
   }
   if (!hasStats) {
-    return "Sounds good, boss. I need your age, sex, height, and weight."
+    return "Got it! Now I just need a few quick details: your age, sex, height, and weight."
   }
   if (!hasActivity) {
     return "Cool! What's your activity level? Sedentary, Light, Moderate, Active, or Very Active?"

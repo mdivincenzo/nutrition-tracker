@@ -9,6 +9,8 @@ interface OnboardingChatProps {
   profile: OnboardingProfile
   onProfileUpdate: (updates: Partial<OnboardingProfile>) => void
   step: number
+  initialGoalMessage?: string | null
+  onGoalMessageSent?: () => void
 }
 
 interface Message {
@@ -17,33 +19,59 @@ interface Message {
   content: string
 }
 
-export default function OnboardingChat({ profile, onProfileUpdate, step }: OnboardingChatProps) {
+export default function OnboardingChat({
+  profile,
+  onProfileUpdate,
+  step,
+  initialGoalMessage,
+  onGoalMessageSent
+}: OnboardingChatProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const initializedRef = useRef(false)
   const profileRef = useRef(profile)
+  const goalMessageSentRef = useRef(false)
 
   // Keep profile ref updated
   useEffect(() => {
     profileRef.current = profile
   }, [profile])
 
-  // Initialize with welcome message when entering step 1 (chat-first flow)
+  // Initialize chat - either with welcome message or by processing initial goal
   useEffect(() => {
     if (step === 1 && !initializedRef.current) {
       initializedRef.current = true
+
+      // If we have an initial goal message, don't show welcome - we'll send the goal
+      if (initialGoalMessage) {
+        // Start with empty messages, goal will be sent via the other effect
+        return
+      }
+
+      // Otherwise show welcome message (for returning users with partial progress)
       const welcomeMessage = getInitialMessage(profile)
-      setMessages([
-        {
-          id: 'welcome',
-          role: 'assistant',
-          content: welcomeMessage,
-        },
-      ])
+      if (welcomeMessage) {
+        setMessages([
+          {
+            id: 'welcome',
+            role: 'assistant',
+            content: welcomeMessage,
+          },
+        ])
+      }
     }
-  }, [step, profile])
+  }, [step, profile, initialGoalMessage])
+
+  // Auto-send the initial goal message when it's provided
+  useEffect(() => {
+    if (initialGoalMessage && !goalMessageSentRef.current && initializedRef.current) {
+      goalMessageSentRef.current = true
+      sendMessage(initialGoalMessage)
+      onGoalMessageSent?.()
+    }
+  }, [initialGoalMessage, onGoalMessageSent])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -167,10 +195,10 @@ export default function OnboardingChat({ profile, onProfileUpdate, step }: Onboa
 
   // Get contextual placeholder based on what info is needed next (new flow order)
   const getPlaceholder = (): string => {
-    if (!profile.goal) return "🎯 Describe your fitness goal..."
-    if (!hasStats) return "📊 Enter your age, sex, height, and weight..."
-    if (!profile.activity_level) return "🏃 Enter your activity level..."
-    if (!profile.name) return "👋 Enter your name..."
+    if (!profile.goal) return "Tell me about your fitness goal..."
+    if (!hasStats) return "Enter your age, sex, height, and weight..."
+    if (!profile.activity_level) return "What's your activity level?"
+    if (!profile.name) return "What's your name?"
     return "Type a message..."
   }
 

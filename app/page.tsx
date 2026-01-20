@@ -1,21 +1,20 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { OnboardingProfile, saveOnboardingProfile } from '@/lib/onboarding-tools'
 import OnboardingChat from '@/components/OnboardingChat'
 import PlanPreview from '@/components/PlanPreview'
+import HeroInput from '@/components/HeroInput'
 import Link from 'next/link'
 
 const STORAGE_KEY = 'onboarding_profile'
 
-const inspirationalQuotes = [
-  { text: "The only bad workout is the one that didn't happen.", author: "Unknown" },
-  { text: "Take care of your body. It's the only place you have to live.", author: "Jim Rohn" },
-  { text: "The body achieves what the mind believes.", author: "Napoleon Hill" },
-  { text: "Strength does not come from the body. It comes from the will.", author: "Unknown" },
-  { text: "You don't have to be great to start, but you have to start to be great.", author: "Zig Ziglar" },
+const goalChips = [
+  { emoji: '💪', label: 'Lose fat', goal: 'I want to lose fat and get leaner' },
+  { emoji: '🏋️', label: 'Build muscle', goal: 'I want to build muscle and get stronger' },
+  { emoji: '⚡', label: 'Get fit', goal: 'I want to improve my overall fitness and health' },
 ]
 
 const initialProfile: OnboardingProfile = {
@@ -41,6 +40,8 @@ export default function Home() {
   const [showPlan, setShowPlan] = useState(false)
   const [profile, setProfile] = useState<OnboardingProfile>(initialProfile)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [hasSubmittedGoal, setHasSubmittedGoal] = useState(false)
+  const [pendingGoalMessage, setPendingGoalMessage] = useState<string | null>(null)
   const router = useRouter()
 
   // Check auth on mount and redirect if logged in with profile
@@ -89,11 +90,6 @@ export default function Home() {
     checkAuth()
   }, [router])
 
-  // Select a random quote on mount (stable for the session)
-  const randomQuote = useMemo(() => {
-    return inspirationalQuotes[Math.floor(Math.random() * inspirationalQuotes.length)]
-  }, [])
-
   // Load profile from sessionStorage on mount
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -109,6 +105,10 @@ export default function Home() {
         // If they had recommendations, show the plan
         if (parsed.daily_calories && parsed.daily_protein) {
           setShowPlan(true)
+        }
+        // If they had a goal, show the chat
+        if (parsed.goal) {
+          setHasSubmittedGoal(true)
         }
       } catch {
         // Invalid stored data, start fresh
@@ -158,6 +158,16 @@ export default function Home() {
     setShowPlan(false)
   }
 
+  const handleGoalSubmit = (goalText: string) => {
+    setPendingGoalMessage(goalText)
+    setHasSubmittedGoal(true)
+  }
+
+  const handleChipClick = (goalText: string) => {
+    setPendingGoalMessage(goalText)
+    setHasSubmittedGoal(true)
+  }
+
   // Show loading state while checking auth
   if (isCheckingAuth) {
     return (
@@ -182,7 +192,7 @@ export default function Home() {
         <header className="px-8 py-4 border-b border-surface-border">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold">1K A Day</h1>
+              <h1 className="text-xl font-semibold">1K</h1>
             </div>
 
             {/* Login link */}
@@ -190,7 +200,7 @@ export default function Home() {
               href="/login"
               className="text-sm text-text-secondary hover:text-accent-violet transition-colors"
             >
-              Already have an account? <span className="text-accent-violet">Log in</span>
+              Log in →
             </Link>
           </div>
         </header>
@@ -201,24 +211,48 @@ export default function Home() {
             profile={profile}
             onBack={handleBack}
           />
-        ) : (
+        ) : hasSubmittedGoal ? (
+          // Chat view after goal is submitted
           <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full">
-            {/* Hero Section */}
-            <div className="text-center py-8 px-4">
-              <h2 className="text-3xl font-bold mb-2">1K Mission Control Panel</h2>
-              <p className="text-text-secondary mb-6">Conversational fitness tracking and coaching.</p>
-              <blockquote className="text-text-tertiary italic">
-                &ldquo;{randomQuote.text}&rdquo;
-                <footer className="mt-1 text-sm not-italic">&mdash; {randomQuote.author}</footer>
-              </blockquote>
-            </div>
-
-            {/* AI Chat */}
             <OnboardingChat
               profile={profile}
               onProfileUpdate={updateProfile}
               step={1}
+              initialGoalMessage={pendingGoalMessage}
+              onGoalMessageSent={() => setPendingGoalMessage(null)}
             />
+          </div>
+        ) : (
+          // Gravity Well - Initial landing view
+          <div className="flex-1 flex flex-col items-center justify-center px-4 -mt-16">
+            {/* Statement */}
+            <h2 className="text-4xl md:text-5xl font-bold text-center mb-2 tracking-tight">
+              Your body.
+            </h2>
+            <h2 className="text-4xl md:text-5xl font-bold text-center mb-10 tracking-tight gradient-text">
+              Your rules.
+            </h2>
+
+            {/* Hero Input */}
+            <HeroInput onSubmit={handleGoalSubmit} />
+
+            {/* Quick-tap chips */}
+            <div className="flex flex-wrap justify-center gap-3 mt-6">
+              {goalChips.map((chip) => (
+                <button
+                  key={chip.label}
+                  onClick={() => handleChipClick(chip.goal)}
+                  className="goal-chip"
+                >
+                  {chip.emoji} {chip.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Trust signal */}
+            <p className="text-text-tertiary text-sm mt-8">
+              AI-powered • 60 second setup
+            </p>
           </div>
         )}
       </div>

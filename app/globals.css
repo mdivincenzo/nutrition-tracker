@@ -515,6 +515,115 @@
   cursor: not-allowed;
 }
 
+/* ========================================
+   HERO INPUT - The Gravity Well
+   ======================================== */
+
+.hero-input-wrapper {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    var(--accent-indigo),
+    var(--accent-violet),
+    var(--accent-fuchsia),
+    var(--accent-violet),
+    var(--accent-indigo)
+  );
+  background-size: 300% 300%;
+  animation: gradientShift 4s ease infinite;
+  padding: 2px;
+  border-radius: 16px;
+}
+
+/* Outer glow */
+.hero-input-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  background: inherit;
+  background-size: inherit;
+  animation: inherit;
+  border-radius: 20px;
+  filter: blur(16px);
+  opacity: 0.6;
+  z-index: -1;
+}
+
+.hero-input {
+  width: 100%;
+  padding: 1.25rem 4.5rem 1.25rem 1.5rem;
+  font-size: 1.125rem;
+  background: rgba(10, 10, 15, 0.95);
+  border: none;
+  border-radius: 14px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.hero-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.hero-input:disabled {
+  opacity: 0.7;
+}
+
+.hero-submit {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent-indigo), var(--accent-violet));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.hero-submit:hover:not(:disabled) {
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.6);
+}
+
+.hero-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ========================================
+   GOAL CHIPS - Quick Taps
+   ======================================== */
+
+.goal-chip {
+  padding: 0.625rem 1.25rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.goal-chip:hover {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: var(--accent-violet);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
 /* Utility classes */
 @layer utilities {
   .animate-float {
