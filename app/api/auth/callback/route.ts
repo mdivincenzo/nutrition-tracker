@@ -30,6 +30,21 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
+      // Extract first name from Google profile and store in cookie for onboarding
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.user_metadata) {
+        const fullName = user.user_metadata.full_name || user.user_metadata.name || ''
+        const firstName = fullName.split(' ')[0]
+        if (firstName) {
+          cookieStore.set({
+            name: 'onboarding_name',
+            value: firstName,
+            path: '/',
+            maxAge: 60 * 60, // 1 hour - just for onboarding
+            sameSite: 'lax',
+          })
+        }
+      }
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
