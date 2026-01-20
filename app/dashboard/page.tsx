@@ -23,7 +23,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     .single()
 
   if (!profile) {
-    redirect('/onboarding')
+    redirect('/')
   }
 
   const today = new Date().toISOString().split('T')[0]

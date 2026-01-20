@@ -64,8 +64,19 @@ export async function middleware(request: NextRequest) {
   }
 
   // If user is logged in and tries to access login/signup, redirect to dashboard
+  // But only if they have a complete profile (fully onboarded)
   if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, name, daily_calories')
+      .eq('user_id', user.id)
+      .single()
+
+    // Only redirect if they have a complete profile
+    if (profile && profile.name && profile.daily_calories) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+    // Otherwise let them continue to signup/login to complete onboarding
   }
 
   // If user is on dashboard, check if they have a profile
