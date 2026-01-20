@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -10,7 +10,13 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [showDevTools, setShowDevTools] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    // Show dev tools on localhost
+    setShowDevTools(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,7 +57,7 @@ export default function Login() {
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-10">
           <Link href="/" className="inline-block mb-6">
-            <span className="text-2xl font-semibold gradient-text">Nutrition Tracker</span>
+            <span className="text-2xl font-semibold gradient-text">1K A Day</span>
           </Link>
           <h1 className="text-3xl font-semibold tracking-tight mb-2">Welcome back</h1>
           <p className="text-text-secondary">Sign in to continue your journey</p>
@@ -151,8 +157,8 @@ export default function Login() {
           </Link>
         </p>
 
-        {/* Dev Tools - only in development */}
-        {process.env.NODE_ENV === 'development' && (
+        {/* Dev Tools - only on localhost */}
+        {showDevTools && (
           <div className="mt-8 p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10">
             <p className="text-xs text-yellow-500 font-medium mb-3">Dev Tools</p>
             <div className="space-y-2">

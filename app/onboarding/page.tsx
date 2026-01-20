@@ -128,7 +128,7 @@ export default function Onboarding() {
         <header className="px-8 py-4 border-b border-surface-border">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold">Nutrition Tracker</h1>
+              <h1 className="text-xl font-semibold">1K A Day</h1>
             </div>
 
             {/* Step indicators */}
@@ -166,61 +166,67 @@ export default function Onboarding() {
                   />
                 </div>
 
-                {/* Age, Height, Weight in a row */}
-                <div className="grid grid-cols-4 gap-3">
+                {/* Age and Weight row */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="input-label">Age</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={profile.age || ''}
-                      onChange={(e) => updateProfile({ age: e.target.value ? parseInt(e.target.value) : null })}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '')
+                        updateProfile({ age: val ? parseInt(val) : null })
+                      }}
                       className="input-field"
                       placeholder="32"
-                      min="13"
-                      max="120"
                     />
-                  </div>
-                  <div>
-                    <label className="input-label">Height</label>
-                    <div className="flex gap-1.5">
-                      <div className="relative flex-1">
-                        <input
-                          type="number"
-                          value={profile.height_feet ?? ''}
-                          onChange={(e) => updateProfile({ height_feet: e.target.value ? parseInt(e.target.value) : null })}
-                          className="input-field pr-7 text-center"
-                          placeholder="5"
-                          min="3"
-                          max="8"
-                        />
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary text-sm">ft</span>
-                      </div>
-                      <div className="relative flex-1">
-                        <input
-                          type="number"
-                          value={profile.height_inches ?? ''}
-                          onChange={(e) => updateProfile({ height_inches: e.target.value ? parseInt(e.target.value) : null })}
-                          className="input-field pr-6 text-center"
-                          placeholder="10"
-                          min="0"
-                          max="11"
-                        />
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary text-sm">in</span>
-                      </div>
-                    </div>
                   </div>
                   <div>
                     <label className="input-label">Weight</label>
                     <div className="relative">
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={profile.start_weight || ''}
-                        onChange={(e) => updateProfile({ start_weight: e.target.value ? parseFloat(e.target.value) : null })}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9.]/g, '')
+                          updateProfile({ start_weight: val ? parseFloat(val) : null })
+                        }}
                         className="input-field pr-10"
                         placeholder="180"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary text-sm">lbs</span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Height row with dropdowns */}
+                <div>
+                  <label className="input-label">Height</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <select
+                      value={profile.height_feet ?? ''}
+                      onChange={(e) => updateProfile({ height_feet: e.target.value ? parseInt(e.target.value) : null })}
+                      className="input-field"
+                    >
+                      <option value="">Feet</option>
+                      {[3, 4, 5, 6, 7, 8].map((ft) => (
+                        <option key={ft} value={ft}>{ft} ft</option>
+                      ))}
+                    </select>
+                    <select
+                      value={profile.height_inches ?? ''}
+                      onChange={(e) => updateProfile({ height_inches: e.target.value ? parseInt(e.target.value) : null })}
+                      className="input-field"
+                    >
+                      <option value="">Inches</option>
+                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((inch) => (
+                        <option key={inch} value={inch}>{inch} in</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

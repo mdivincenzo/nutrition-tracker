@@ -77,5 +77,5 @@ export function getInitialMessage(profile: OnboardingProfile): string {
   const statsParts = [age, height, weight].filter(Boolean)
   const statsText = statsParts.length > 0 ? statsParts.join(', ') : ''
 
-  return `Hi ${name}! I see you're ${statsText}${activity ? ` with a ${activity} activity level` : ''}. What are you hoping to achieve? Pick a goal below or tell me in your own words!`
+  return `Hi ${name}! Based on your profile (${statsText}${activity ? `, ${activity}` : ''}), I can create a personalized plan for you. Tell me about your fitness goals - what are you hoping to achieve and by when?`
 }

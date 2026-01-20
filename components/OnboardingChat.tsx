@@ -260,11 +260,6 @@ export default function OnboardingChat({ profile, onProfileUpdate, step }: Onboa
           <ChatMessage key={message.id} message={message} />
         ))}
 
-        {/* Goal buttons appear after Claude's initial message */}
-        {showGoalButtons && (
-          <GoalButtons onGoalSelect={handleGoalSelect} disabled={isLoading} />
-        )}
-
         {/* Loading indicator */}
         {isLoading && messages[messages.length - 1]?.role === 'user' && (
           <div className="flex justify-start">
@@ -292,25 +287,32 @@ export default function OnboardingChat({ profile, onProfileUpdate, step }: Onboa
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-surface-border">
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={showGoalButtons ? "Or type your own goal..." : "Type a message..."}
-            className="input-field"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="btn-primary px-6 whitespace-nowrap"
-          >
-            Send
-          </button>
-        </div>
-      </form>
+      <div className="p-4 border-t border-surface-border">
+        <form onSubmit={handleSubmit}>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={showGoalButtons ? "Describe your fitness goal..." : "Type a message..."}
+              className="input-field"
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="btn-primary px-6 whitespace-nowrap"
+            >
+              Send
+            </button>
+          </div>
+        </form>
+
+        {/* Goal buttons appear at bottom, below input */}
+        {showGoalButtons && (
+          <GoalButtons onGoalSelect={handleGoalSelect} disabled={isLoading} />
+        )}
+      </div>
     </div>
   )
 }
