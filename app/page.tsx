@@ -53,7 +53,10 @@ export default function Home() {
       const params = new URLSearchParams(window.location.search)
       const code = params.get('code')
       if (code) {
-        await supabase.auth.exchangeCodeForSession(code)
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) {
+          console.error('OAuth code exchange failed:', error)
+        }
         // Clean up URL
         window.history.replaceState({}, '', window.location.pathname)
       }
