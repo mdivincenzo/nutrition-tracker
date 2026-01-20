@@ -26,16 +26,27 @@ export default function Dashboard({ profile, meals, workouts, weighIn, totals, h
   const isTodaySelected = isToday(currentDate)
 
   const handleResetProfile = async () => {
-    if (!confirm('This will delete your profile and all data. You will be redirected to onboarding. Continue?')) {
+    if (!confirm('This will delete your profile, clear storage, and sign you out. Continue?')) {
       return
     }
+    const supabase = createClient()
+
+    // 1. Reset profile via API
     const res = await fetch('/api/dev/reset', { method: 'POST' })
     const data = await res.json()
+
+    // 2. Clear all storage to prevent auto-restore
+    sessionStorage.clear()
+    localStorage.clear()
+
+    // 3. Sign out to clear HTTP-only cookies
+    await supabase.auth.signOut()
+
     if (res.ok) {
-      router.push('/onboarding')
-      router.refresh()
+      window.location.href = '/login'
     } else {
       alert(data.error || 'Failed to reset')
+      window.location.href = '/login'
     }
   }
 
@@ -129,7 +140,7 @@ export default function Dashboard({ profile, meals, workouts, weighIn, totals, h
               onClick={handleResetProfile}
               className="w-full py-2 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
             >
-              Reset Profile (re-test onboarding)
+              Reset Profile & Logout (full reset)
             </button>
             <button
               onClick={handleSignOut}

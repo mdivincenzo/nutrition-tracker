@@ -205,13 +205,37 @@ export default function Login() {
               </button>
               <button
                 onClick={async () => {
+                  const supabase = createClient()
+                  // 1. Reset profile via API
                   const res = await fetch('/api/dev/reset', { method: 'POST' })
                   const data = await res.json()
-                  alert(data.message || data.error)
+                  console.log('Reset result:', data)
+
+                  // 2. Clear all storage
+                  sessionStorage.clear()
+                  localStorage.clear()
+
+                  // 3. Sign out to clear HTTP-only cookies
+                  await supabase.auth.signOut()
+
+                  alert(data.error ? `Error: ${data.error}` : 'Profile reset & logged out. You can now test the new user flow.')
+                  window.location.href = '/login'
                 }}
                 className="w-full py-2 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
               >
-                Reset My Profile (re-test onboarding)
+                Reset Profile & Logout (full reset)
+              </button>
+              <button
+                onClick={async () => {
+                  const supabase = createClient()
+                  await supabase.auth.signOut()
+                  sessionStorage.clear()
+                  localStorage.clear()
+                  window.location.reload()
+                }}
+                className="w-full py-2 text-sm bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg transition-colors"
+              >
+                Force Logout (clear session)
               </button>
             </div>
           </div>

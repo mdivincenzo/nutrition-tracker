@@ -60,17 +60,27 @@ export async function POST() {
 
   // Delete in order due to foreign key constraints
   const tables = ['chat_history', 'user_insights', 'meals', 'workouts', 'weigh_ins', 'profiles']
+  const errors: string[] = []
 
   for (const table of tables) {
-    if (table === 'profiles') {
-      await supabase.from(table).delete().eq('user_id', user.id)
-    } else {
-      await supabase.from(table).delete().eq('profile_id', profile.id)
+    const { error } = table === 'profiles'
+      ? await supabase.from(table).delete().eq('user_id', user.id)
+      : await supabase.from(table).delete().eq('profile_id', profile.id)
+
+    if (error) {
+      errors.push(`${table}: ${error.message}`)
     }
   }
 
+  if (errors.length > 0) {
+    return NextResponse.json({
+      error: `Failed to delete some data: ${errors.join(', ')}`,
+      deletedProfileId: profile.id
+    }, { status: 500 })
+  }
+
   return NextResponse.json({
-    message: 'Profile and all related data deleted. Refresh to go through onboarding again.',
+    message: 'Profile and all related data deleted.',
     deletedProfileId: profile.id
   })
 }

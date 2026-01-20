@@ -110,7 +110,7 @@ export default function Home() {
 
             if (authSource === 'login') {
               // They tried to login but don't have an account yet
-              showToast("Looks like you're new! Let's set up your plan.", 'info')
+              showToast("Looks like you're new! Enter your goal to set up your plan.", 'info')
             }
           }
           // They'll see the onboarding flow
