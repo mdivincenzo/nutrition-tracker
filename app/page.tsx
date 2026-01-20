@@ -48,6 +48,16 @@ export default function Home() {
   useEffect(() => {
     const checkAuth = async () => {
       const supabase = createClient()
+
+      // Handle OAuth code if present in URL (fallback if redirectTo didn't work)
+      const params = new URLSearchParams(window.location.search)
+      const code = params.get('code')
+      if (code) {
+        await supabase.auth.exchangeCodeForSession(code)
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
 
       if (user) {
@@ -189,7 +199,7 @@ export default function Home() {
 
       <div className="min-h-screen flex flex-col relative z-10">
         {/* Header */}
-        <header className="px-8 py-4 border-b border-surface-border">
+        <header className="px-8 py-4 border-b border-surface-border relative z-20">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold">Macro</h1>
