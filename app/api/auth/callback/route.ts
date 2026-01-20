@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const authSource = searchParams.get('auth_source')
   const next = searchParams.get('next') ?? '/dashboard'
 
   if (code) {
@@ -45,6 +46,18 @@ export async function GET(request: Request) {
           })
         }
       }
+
+      // Store auth source for showing appropriate message to new users from login
+      if (authSource) {
+        cookieStore.set({
+          name: 'auth_source',
+          value: authSource,
+          path: '/',
+          maxAge: 60 * 5, // 5 minutes - just for the redirect
+          sameSite: 'lax',
+        })
+      }
+
       return NextResponse.redirect(`${origin}${next}`)
     }
   }

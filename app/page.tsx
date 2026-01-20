@@ -8,6 +8,7 @@ import OnboardingChat from '@/components/OnboardingChat'
 import PlanPreview from '@/components/PlanPreview'
 import HeroInput from '@/components/HeroInput'
 import Link from 'next/link'
+import { useToast } from '@/lib/toast-context'
 
 const STORAGE_KEY = 'onboarding_profile'
 
@@ -43,6 +44,7 @@ export default function Home() {
   const [hasSubmittedGoal, setHasSubmittedGoal] = useState(false)
   const [pendingGoalMessage, setPendingGoalMessage] = useState<string | null>(null)
   const router = useRouter()
+  const { showToast } = useToast()
 
   // Check auth on mount and redirect if logged in with profile
   useEffect(() => {
@@ -98,7 +100,20 @@ export default function Home() {
           }
 
           // User is authenticated but needs to complete onboarding
-          // This is fine - they'll see the onboarding flow
+          // Check if they came from login (expecting an account) vs signup
+          const cookies = document.cookie.split(';')
+          const authSourceCookie = cookies.find((c) => c.trim().startsWith('auth_source='))
+          if (authSourceCookie) {
+            const authSource = authSourceCookie.split('=')[1]
+            // Clear the cookie after reading
+            document.cookie = 'auth_source=; path=/; max-age=0'
+
+            if (authSource === 'login') {
+              // They tried to login but don't have an account yet
+              showToast("Looks like you're new! Let's set up your plan.", 'info')
+            }
+          }
+          // They'll see the onboarding flow
         }
       } catch (error) {
         console.error('Auth check failed:', error)
@@ -109,7 +124,7 @@ export default function Home() {
     }
 
     checkAuth()
-  }, [router])
+  }, [router, showToast])
 
   // Load profile from sessionStorage on mount
   useEffect(() => {
