@@ -97,7 +97,7 @@ export default function PlanPreview({ profile, onBack }: PlanPreviewProps) {
         </div>
 
         {/* Trust signal */}
-        <p className="text-center text-xs text-text-tertiary mb-4">
+        <p className="text-center text-xs text-text-tertiary mb-4 whitespace-nowrap">
           Your targets are calculated using evidence-based nutrition science, powered by Claude AI.
         </p>
 

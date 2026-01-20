@@ -311,7 +311,6 @@ export default function OnboardingChat({
               onChange={(e) => setInput(e.target.value)}
               placeholder={getPlaceholder()}
               className="hero-input-sm"
-              disabled={isLoading}
               autoFocus
             />
             <button
