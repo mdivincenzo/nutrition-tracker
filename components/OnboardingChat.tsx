@@ -22,11 +22,11 @@ interface Message {
 }
 
 const activityChips = [
-  { value: 'sedentary', label: 'Sedentary', emoji: '🪑' },
-  { value: 'light', label: 'Light', emoji: '🚶' },
-  { value: 'moderate', label: 'Moderate', emoji: '🏃' },
-  { value: 'active', label: 'Active', emoji: '💪' },
-  { value: 'very_active', label: 'Very Active', emoji: '🔥' },
+  { value: 'sedentary', label: 'Sedentary', emoji: '🪑', description: 'Desk job, little exercise' },
+  { value: 'light', label: 'Light', emoji: '🚶', description: 'Light exercise 1-2x/week' },
+  { value: 'moderate', label: 'Moderate', emoji: '🏃', description: 'Moderate exercise 3-4x/week' },
+  { value: 'active', label: 'Active', emoji: '💪', description: 'Hard exercise 5-6x/week' },
+  { value: 'very_active', label: 'Very Active', emoji: '🔥', description: 'Intense exercise daily' },
 ]
 
 export default function OnboardingChat({
@@ -333,16 +333,20 @@ export default function OnboardingChat({
 
         {/* Activity chips (only when on activity step) */}
         {showActivityChips && (
-          <div className="flex flex-wrap justify-center gap-2 mt-4">
+          <div className="flex flex-col gap-2 mt-4 max-w-sm mx-auto">
             {activityChips.map((chip) => (
               <button
                 key={chip.value}
                 type="button"
                 onClick={() => sendMessage(chip.value)}
-                className="goal-chip"
+                className="goal-chip flex items-center justify-between px-4 py-2.5 w-full"
                 disabled={isLoading}
               >
-                {chip.emoji} {chip.label}
+                <span className="flex items-center gap-2">
+                  <span>{chip.emoji}</span>
+                  <span className="font-medium">{chip.label}</span>
+                </span>
+                <span className="text-text-tertiary text-sm">{chip.description}</span>
               </button>
             ))}
           </div>

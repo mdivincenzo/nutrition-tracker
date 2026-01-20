@@ -69,9 +69,14 @@ export async function POST(request: Request) {
           // Stream any text content
           for (const block of response.content) {
             if (block.type === 'text') {
-              fullResponse += block.text
+              // Add space between concatenated responses if needed
+              const needsSpace = fullResponse.length > 0
+                && !/\s$/.test(fullResponse)
+                && !/^\s/.test(block.text)
+              const textToSend = needsSpace ? ' ' + block.text : block.text
+              fullResponse += textToSend
               await writer.write(
-                encoder.encode(`data: ${JSON.stringify({ content: block.text })}\n\n`)
+                encoder.encode(`data: ${JSON.stringify({ content: textToSend })}\n\n`)
               )
             }
           }

@@ -9,128 +9,112 @@ interface PlanPreviewProps {
 }
 
 export default function PlanPreview({ profile, onBack }: PlanPreviewProps) {
-  const { daily_calories, daily_protein, daily_carbs, daily_fat, goal, tdee } = profile
+  const { name, daily_calories, daily_protein, daily_carbs, daily_fat } = profile
 
-  // Calculate deficit/surplus info
-  const getGoalDescription = () => {
-    if (!tdee || !daily_calories) return null
-
-    const diff = tdee - daily_calories
-    const goalLabel = goal === 'lose' ? 'lose weight' : goal === 'gain' ? 'build muscle' : 'maintain weight'
-
-    if (goal === 'lose') {
-      return `Based on your goal to ${goalLabel}, we recommend a ${Math.abs(diff)} calorie deficit from your TDEE of ${tdee} calories.`
-    } else if (goal === 'gain') {
-      return `Based on your goal to ${goalLabel}, we recommend a ${Math.abs(diff)} calorie surplus above your TDEE of ${tdee} calories.`
-    } else {
-      return `Based on your goal to ${goalLabel}, we've set your daily target at your TDEE of ${tdee} calories.`
-    }
-  }
-
-  const macros = [
+  const features = [
     {
-      label: 'Calories',
-      value: daily_calories || 0,
-      unit: 'kcal',
-      icon: '🔥',
-      color: 'from-orange-500 to-red-500',
+      icon: '💬',
+      title: 'Just tell me what you ate',
+      example: '"I had a chicken burrito for lunch"',
+      benefit: "I'll log it and track your macros automatically",
     },
     {
-      label: 'Protein',
-      value: daily_protein || 0,
-      unit: 'g',
-      icon: '💪',
-      color: 'from-blue-500 to-indigo-500',
+      icon: '🧠',
+      title: 'Get personalized coaching',
+      example: '"You\'re 40g short on protein—try Greek yogurt or a protein shake before bed"',
+      benefit: null,
     },
     {
-      label: 'Carbs',
-      value: daily_carbs || 0,
-      unit: 'g',
-      icon: '🍞',
-      color: 'from-yellow-500 to-orange-500',
-    },
-    {
-      label: 'Fat',
-      value: daily_fat || 0,
-      unit: 'g',
-      icon: '🥑',
-      color: 'from-green-500 to-emerald-500',
+      icon: '📈',
+      title: 'Track your progress',
+      example: null,
+      benefit: 'Daily streaks • Weight trends • Weekly averages',
     },
   ]
 
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
+    <div className="flex-1 flex items-center justify-center p-6">
       <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-semibold mb-2">Your Personalized Plan</h2>
-          <p className="text-text-secondary">Here&apos;s what we recommend based on your goals</p>
+        {/* Personalized header */}
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-semibold mb-1">
+            🎯 Your plan is ready{name ? `, ${name}` : ''}!
+          </h2>
         </div>
 
-        <div className="glass-card p-6 space-y-6">
-          {/* Daily Targets Header */}
-          <div>
-            <h3 className="text-lg font-medium text-text-primary mb-4">Daily Targets</h3>
+        {/* Compact macro summary */}
+        <div className="glass-card p-4 mb-6">
+          <p className="text-sm text-text-secondary mb-3">Daily Targets</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-2">
+              <span>🔥</span>
+              <span className="font-semibold">{daily_calories || 0}</span>
+              <span className="text-text-secondary text-sm">kcal</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>💪</span>
+              <span className="font-semibold">{daily_protein || 0}g</span>
+              <span className="text-text-secondary text-sm">protein</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>🍞</span>
+              <span className="font-semibold">{daily_carbs || 0}g</span>
+              <span className="text-text-secondary text-sm">carbs</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>🥑</span>
+              <span className="font-semibold">{daily_fat || 0}g</span>
+              <span className="text-text-secondary text-sm">fat</span>
+            </div>
+          </div>
+        </div>
 
-            {/* Macro targets */}
-            <div className="space-y-4">
-              {macros.map((macro) => (
-                <div key={macro.label} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{macro.icon}</span>
-                      <span className="font-medium text-text-primary">{macro.label}</span>
-                    </div>
-                    <span className="text-text-secondary">
-                      <span className="text-text-primary font-semibold">{macro.value}</span> {macro.unit}
-                    </span>
-                  </div>
-                  <div className="h-2 bg-surface-hover rounded-full overflow-hidden">
-                    <div
-                      className={`h-full bg-gradient-to-r ${macro.color} rounded-full`}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
+        {/* How it works */}
+        <p className="text-center text-text-secondary text-sm mb-4">Here&apos;s how it works</p>
+
+        {/* Feature cards */}
+        <div className="space-y-3 mb-6">
+          {features.map((feature) => (
+            <div key={feature.title} className="glass-card p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-xl">{feature.icon}</span>
+                <div className="flex-1">
+                  <p className="font-medium text-text-primary">{feature.title}</p>
+                  {feature.example && (
+                    <p className="text-sm text-text-secondary mt-1 italic">
+                      {feature.example}
+                    </p>
+                  )}
+                  {feature.benefit && (
+                    <p className="text-sm text-text-secondary mt-1">
+                      {feature.benefit}
+                    </p>
+                  )}
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
-
-          {/* Goal explanation */}
-          {getGoalDescription() && (
-            <div className="pt-4 border-t border-surface-border">
-              <p className="text-sm text-text-secondary leading-relaxed">
-                {getGoalDescription()}
-              </p>
-            </div>
-          )}
-
-          {/* CTA Buttons */}
-          <div className="pt-4 space-y-3">
-            <Link
-              href="/signup"
-              className="btn-primary w-full text-center block py-3.5"
-            >
-              Create Account to Start
-            </Link>
-
-            <p className="text-center text-sm text-text-secondary">
-              Already have an account?{' '}
-              <Link href="/login" className="text-accent-violet hover:text-accent-fuchsia transition-colors">
-                Log in
-              </Link>
-            </p>
-          </div>
+          ))}
         </div>
 
-        {/* Back button */}
-        <div className="mt-6">
-          <button
-            onClick={onBack}
-            className="text-text-secondary hover:text-text-primary transition-colors text-sm"
-          >
-            &larr; Go back and adjust
-          </button>
-        </div>
+        {/* CTA */}
+        <Link href="/signup" className="btn-primary w-full text-center block py-3.5">
+          Start Your Journey →
+        </Link>
+
+        <p className="text-center text-sm text-text-secondary mt-4">
+          Already have an account?{' '}
+          <Link href="/login" className="text-accent-violet hover:underline">
+            Log in
+          </Link>
+        </p>
+
+        {/* Back link */}
+        <button
+          onClick={onBack}
+          className="w-full text-center text-text-tertiary text-sm mt-4 hover:text-text-secondary"
+        >
+          ← Adjust my plan
+        </button>
       </div>
     </div>
   )
