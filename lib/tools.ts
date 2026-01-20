@@ -86,6 +86,10 @@ export const toolDefinitions: Anthropic.Tool[] = [
           type: 'string',
           description: 'Additional notes about the workout',
         },
+        calories_burned: {
+          type: 'number',
+          description: 'Estimated calories burned during the workout',
+        },
       },
       required: ['exercise'],
     },
@@ -307,10 +311,12 @@ export async function executeTool(
         sets: input.sets,
         reps: input.reps,
         notes: input.notes,
+        calories_burned: input.calories_burned,
       })
 
       if (error) return `Error logging workout: ${error.message}`
-      return `Workout logged: ${input.exercise}`
+      const caloriesInfo = input.calories_burned ? ` (~${input.calories_burned} cal burned)` : ''
+      return `Workout logged: ${input.exercise}${caloriesInfo}`
     }
 
     case 'log_weight': {

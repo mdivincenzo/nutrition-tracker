@@ -42,6 +42,7 @@ export interface Workout {
   sets: number | null
   reps: number | null
   notes: string | null
+  calories_burned: number | null
 }
 
 export interface WeighIn {
