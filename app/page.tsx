@@ -47,57 +47,65 @@ export default function Home() {
   // Check auth on mount and redirect if logged in with profile
   useEffect(() => {
     const checkAuth = async () => {
-      const supabase = createClient()
+      try {
+        const supabase = createClient()
 
-      // Handle OAuth code if present in URL (fallback if redirectTo didn't work)
-      const params = new URLSearchParams(window.location.search)
-      const code = params.get('code')
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (error) {
-          console.error('OAuth code exchange failed:', error)
-        }
-        // Clean up URL
-        window.history.replaceState({}, '', window.location.pathname)
-      }
-
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (user) {
-        // Check if user has a complete profile
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('name, daily_calories')
-          .eq('user_id', user.id)
-          .single()
-
-        if (existingProfile?.name && existingProfile?.daily_calories) {
-          // User is logged in with complete profile, redirect to dashboard
-          router.replace('/dashboard')
-          return
-        }
-
-        // User is authenticated but no profile - check if we have onboarding data to save
-        const stored = sessionStorage.getItem(STORAGE_KEY)
-        if (stored) {
-          try {
-            const storedProfile: OnboardingProfile = JSON.parse(stored)
-            if (storedProfile.daily_calories && storedProfile.daily_protein && storedProfile.name) {
-              // Auto-save the profile
-              const result = await saveOnboardingProfile(storedProfile, user.id, supabase)
-              if (result.success) {
-                sessionStorage.removeItem(STORAGE_KEY)
-                router.replace('/dashboard')
-                return
-              }
-            }
-          } catch {
-            // Ignore parse errors, continue to onboarding
+        // Handle OAuth code if present in URL (fallback if redirectTo didn't work)
+        const params = new URLSearchParams(window.location.search)
+        const code = params.get('code')
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code)
+          if (error) {
+            console.error('OAuth code exchange failed:', error)
           }
+          // Clean up URL
+          window.history.replaceState({}, '', window.location.pathname)
         }
-      }
 
-      setIsCheckingAuth(false)
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (user) {
+          // Check if user has a complete profile
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('name, daily_calories')
+            .eq('user_id', user.id)
+            .single()
+
+          if (existingProfile?.name && existingProfile?.daily_calories) {
+            // User is logged in with complete profile, redirect to dashboard
+            router.replace('/dashboard')
+            return
+          }
+
+          // User is authenticated but no profile - check if we have onboarding data to save
+          const stored = sessionStorage.getItem(STORAGE_KEY)
+          if (stored) {
+            try {
+              const storedProfile: OnboardingProfile = JSON.parse(stored)
+              if (storedProfile.daily_calories && storedProfile.daily_protein && storedProfile.name) {
+                // Auto-save the profile
+                const result = await saveOnboardingProfile(storedProfile, user.id, supabase)
+                if (result.success) {
+                  sessionStorage.removeItem(STORAGE_KEY)
+                  router.replace('/dashboard')
+                  return
+                }
+              }
+            } catch {
+              // Ignore parse errors, continue to onboarding
+            }
+          }
+
+          // User is authenticated but needs to complete onboarding
+          // This is fine - they'll see the onboarding flow
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error)
+      } finally {
+        // Always stop loading, even if there was an error
+        setIsCheckingAuth(false)
+      }
     }
 
     checkAuth()
