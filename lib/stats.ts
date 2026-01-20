@@ -33,11 +33,16 @@ export async function calculateHeroStats(
   // Group meals by date and sum totals
   const dailyTotals = groupMealsByDate(allMeals)
 
+  // Parse goal from coaching_notes (format: "Goal: lose" or "Goal: gain" or "Goal: maintain")
+  const goalMatch = profile.coaching_notes?.match(/Goal:\s*(lose|gain|maintain)/i)
+  const goal = (goalMatch?.[1]?.toLowerCase() as 'lose' | 'gain' | 'maintain') || 'maintain'
+
   // Calculate streak
   const { currentStreak, bestStreak } = calculateStreak(
     dailyTotals,
     profile.daily_calories || 2000,
-    profile.daily_protein || 150
+    profile.daily_protein || 150,
+    goal
   )
 
   // Calculate days active (from start_date to today)
@@ -84,25 +89,41 @@ function groupMealsByDate(meals: Meal[]): DailyMealTotals[] {
 function calculateStreak(
   dailyTotals: DailyMealTotals[],
   targetCalories: number,
-  targetProtein: number
+  targetProtein: number,
+  goal: 'lose' | 'gain' | 'maintain'
 ): { currentStreak: number; bestStreak: number } {
   if (dailyTotals.length === 0) {
     return { currentStreak: 0, bestStreak: 0 }
   }
 
-  // Check if a day is within +/- 10% of BOTH targets
+  // Check if a day meets calorie and protein goals
+  // Protein: always within ±10% of target
+  // Calories: depends on goal
+  //   - lose: any deficit is good, up to 10% over is acceptable
+  //   - gain: any surplus is good, up to 10% under is acceptable
+  //   - maintain: within ±10%
   const isSuccessDay = (day: DailyMealTotals): boolean => {
-    const calorieLow = targetCalories * 0.9
-    const calorieHigh = targetCalories * 1.1
+    // Protein check: always ±10%
     const proteinLow = targetProtein * 0.9
     const proteinHigh = targetProtein * 1.1
+    const proteinOk = day.protein >= proteinLow && day.protein <= proteinHigh
 
-    return (
-      day.calories >= calorieLow &&
-      day.calories <= calorieHigh &&
-      day.protein >= proteinLow &&
-      day.protein <= proteinHigh
-    )
+    if (!proteinOk) return false
+
+    // Calorie check: depends on goal
+    let caloriesOk = false
+    if (goal === 'lose') {
+      // Deficit is good: any amount under, up to 10% over
+      caloriesOk = day.calories <= targetCalories * 1.1
+    } else if (goal === 'gain') {
+      // Surplus is good: any amount over, up to 10% under
+      caloriesOk = day.calories >= targetCalories * 0.9
+    } else {
+      // Maintain: within ±10%
+      caloriesOk = day.calories >= targetCalories * 0.9 && day.calories <= targetCalories * 1.1
+    }
+
+    return caloriesOk
   }
 
   // Calculate best streak (any consecutive run)
