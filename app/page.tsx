@@ -192,7 +192,7 @@ export default function Home() {
         <header className="px-8 py-4 border-b border-surface-border">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold">1K</h1>
+              <h1 className="text-xl font-semibold">Macro</h1>
             </div>
 
             {/* Login link */}

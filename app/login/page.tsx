@@ -89,7 +89,7 @@ export default function Login() {
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-10">
           <Link href="/" className="inline-block mb-6">
-            <span className="text-2xl font-semibold gradient-text">1K A Day</span>
+            <span className="text-2xl font-semibold gradient-text">Macro</span>
           </Link>
           <h1 className="text-3xl font-semibold tracking-tight mb-2">Welcome back</h1>
           <p className="text-text-secondary">Sign in to continue your journey</p>

@@ -96,6 +96,11 @@ export default function PlanPreview({ profile, onBack }: PlanPreviewProps) {
           ))}
         </div>
 
+        {/* Trust signal */}
+        <p className="text-center text-xs text-text-tertiary mb-4">
+          Your targets are calculated using evidence-based nutrition science, powered by Claude AI.
+        </p>
+
         {/* CTA */}
         <Link href="/signup" className="btn-primary w-full text-center block py-3.5">
           Start Your Journey →
