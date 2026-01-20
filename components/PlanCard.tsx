@@ -1,6 +1,6 @@
 'use client'
 
-import { OnboardingProfile } from '@/lib/onboarding-tools'
+import { OnboardingProfile, calculateTimeline } from '@/lib/onboarding-tools'
 
 interface PlanCardProps {
   profile: OnboardingProfile
@@ -10,7 +10,7 @@ interface PlanCardProps {
 }
 
 export default function PlanCard({ profile, onAdjust, isAdjusting, warning }: PlanCardProps) {
-  const { daily_calories, daily_protein, daily_carbs, daily_fat, goal, tdee } = profile
+  const { daily_calories, daily_protein, daily_carbs, daily_fat, goal, tdee, start_weight, goal_weight } = profile
 
   if (!daily_calories) return null
 
@@ -26,6 +26,11 @@ export default function PlanCard({ profile, onAdjust, isAdjusting, warning }: Pl
       deficitDescription = 'Maintenance calories'
     }
   }
+
+  // Calculate timeline if goal_weight is set
+  const timeline = start_weight && tdee && daily_calories
+    ? calculateTimeline(start_weight, goal_weight, daily_calories, tdee)
+    : null
 
   // Determine if we're at a limit
   const atAggressiveLimit = warning?.includes('aggressive') || warning?.includes('maximum')
@@ -61,8 +66,15 @@ export default function PlanCard({ profile, onAdjust, isAdjusting, warning }: Pl
 
       {/* Description */}
       {deficitDescription && (
-        <p className="text-center text-sm text-text-secondary mb-4">
+        <p className={`text-center text-sm text-text-secondary ${timeline && goal_weight ? 'mb-2' : 'mb-4'}`}>
           {deficitDescription}
+        </p>
+      )}
+
+      {/* Timeline display */}
+      {timeline && goal_weight && (
+        <p className="text-center text-sm text-text-tertiary mb-4">
+          🎯 At {timeline.weeklyChange} lb/week, you&apos;ll reach {goal_weight} lbs in {timeline.weeks} weeks
         </p>
       )}
 
@@ -74,11 +86,11 @@ export default function PlanCard({ profile, onAdjust, isAdjusting, warning }: Pl
       )}
 
       {/* Adjustment buttons */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="flex justify-center gap-3">
         <button
           onClick={() => onAdjust('more_aggressive')}
           disabled={isAdjusting || atAggressiveLimit}
-          className={`py-2.5 px-4 rounded-xl text-sm font-medium transition-all duration-200 ${
+          className={`py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
             atAggressiveLimit
               ? 'bg-surface/50 text-text-tertiary cursor-not-allowed'
               : 'bg-surface border border-surface-border hover:border-surface-hover hover:bg-surface-hover'
@@ -88,17 +100,14 @@ export default function PlanCard({ profile, onAdjust, isAdjusting, warning }: Pl
             <span className="text-xs">At limit</span>
           ) : (
             <>
-              More Aggressive
-              <span className="block text-xs text-text-tertiary mt-0.5">
-                {goal === 'gain' ? '+200 cal' : '-200 cal'}
-              </span>
+              {goal === 'gain' ? '💪' : '🔥'} {goal === 'gain' ? 'More' : 'Faster'}
             </>
           )}
         </button>
         <button
           onClick={() => onAdjust('more_conservative')}
           disabled={isAdjusting || atConservativeLimit}
-          className={`py-2.5 px-4 rounded-xl text-sm font-medium transition-all duration-200 ${
+          className={`py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
             atConservativeLimit
               ? 'bg-surface/50 text-text-tertiary cursor-not-allowed'
               : 'bg-surface border border-surface-border hover:border-surface-hover hover:bg-surface-hover'
@@ -107,12 +116,7 @@ export default function PlanCard({ profile, onAdjust, isAdjusting, warning }: Pl
           {atConservativeLimit ? (
             <span className="text-xs">At limit</span>
           ) : (
-            <>
-              More Conservative
-              <span className="block text-xs text-text-tertiary mt-0.5">
-                {goal === 'gain' ? '-200 cal' : '+200 cal'}
-              </span>
-            </>
+            <>🐢 Easier</>
           )}
         </button>
       </div>

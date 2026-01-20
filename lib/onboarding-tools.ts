@@ -150,6 +150,9 @@ export const onboardingToolDefinitions: Anthropic.Tool[] = [
   },
 ]
 
+// Minimum safe calories (using male default as it's safer than female 1200)
+const MINIMUM_CALORIES = 1500
+
 // Activity multipliers for TDEE calculation
 const activityMultipliers = {
   sedentary: 1.2,
@@ -200,6 +203,11 @@ export function calculateMacros(
     calories = tdee
   }
 
+  // Enforce absolute minimum floor
+  if (calories < MINIMUM_CALORIES) {
+    calories = MINIMUM_CALORIES
+  }
+
   // Calculate macros
   // Protein: 0.8-1g per lb of body weight (higher end for losing/gaining)
   const proteinMultiplier = goal === 'maintain' ? 0.8 : 1.0
@@ -245,6 +253,12 @@ export function adjustPlan(
         newCalories = tdee - 1000
         atLimit = true
         warning = 'This is the most aggressive safe option (~1000 calorie deficit).'
+      }
+      // Absolute minimum floor
+      if (newCalories < MINIMUM_CALORIES) {
+        newCalories = MINIMUM_CALORIES
+        atLimit = true
+        warning = `${MINIMUM_CALORIES} calories is the minimum safe recommendation. Consult a healthcare provider before going lower.`
       }
     } else {
       newCalories = currentCalories + ADJUSTMENT_STEP
@@ -318,6 +332,53 @@ export function adjustPlan(
   const carbs = Math.round(carbCalories / 4)
 
   return { calories: newCalories, protein, carbs, fat, atLimit, warning }
+}
+
+export function calculateTimeline(
+  currentWeight: number,
+  goalWeight: number | null,
+  dailyCalories: number,
+  tdee: number
+): { weeks: number; weeklyChange: number; targetDate: string } | null {
+  // Can't calculate without goal weight
+  if (goalWeight === null) return null
+
+  // Calculate daily deficit/surplus
+  const dailyDiff = tdee - dailyCalories
+
+  // No meaningful change expected
+  if (Math.abs(dailyDiff) < 50) return null
+
+  // Weekly weight change: (daily deficit × 7) ÷ 3500 (3500 cal = 1 lb)
+  const weeklyChange = (dailyDiff * 7) / 3500
+
+  // Weight difference
+  const weightDiff = currentWeight - goalWeight
+
+  // Check if we're going in the right direction
+  // Positive weightDiff means we need to lose weight (need positive weeklyChange/deficit)
+  // Negative weightDiff means we need to gain weight (need negative weeklyChange/surplus)
+  if ((weightDiff > 0 && weeklyChange <= 0) || (weightDiff < 0 && weeklyChange >= 0)) {
+    return null
+  }
+
+  // Weeks to goal
+  const weeks = Math.round(Math.abs(weightDiff) / Math.abs(weeklyChange))
+
+  // Calculate target date
+  const targetDate = new Date()
+  targetDate.setDate(targetDate.getDate() + weeks * 7)
+  const formattedDate = targetDate.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: targetDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+  })
+
+  return {
+    weeks,
+    weeklyChange: Math.round(Math.abs(weeklyChange) * 10) / 10,
+    targetDate: formattedDate,
+  }
 }
 
 export async function executeOnboardingTool(

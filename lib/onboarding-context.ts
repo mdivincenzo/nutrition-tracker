@@ -21,8 +21,8 @@ export function buildOnboardingSystemPrompt(profile: OnboardingProfile, step: nu
 
 ## Goal Button Mappings
 When the user selects a quick goal button, respond appropriately:
-- "Lose Weight Quickly" → goal: 'lose' with aggressive deficit (~750-1000 cal below TDEE), protein at 1g/lb
-- "Get Toned" → goal: 'lose' with moderate deficit (~300-500 cal below TDEE), protein at 0.9g/lb
+- "Lose Weight Quickly" → goal: 'lose' with aggressive deficit (~750-1000 cal below TDEE), protein at 1g/lb. IMPORTANT: Ask for their goal_weight so you can show them a timeline (e.g., "What's your target weight?")
+- "Get Toned" → goal: 'lose' with moderate deficit (~300-500 cal below TDEE), protein at 0.9g/lb. Goal weight is optional for body recomp.
 - "Bulk Up" → goal: 'gain' with moderate surplus (~300-500 cal above TDEE), protein at 0.8-1g/lb
 
 ## Current State

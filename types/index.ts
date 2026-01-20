@@ -86,3 +86,13 @@ export interface DailyLog {
   weigh_in: WeighIn | null
   totals: DailyTotals
 }
+
+export interface HeroStats {
+  currentStreak: number
+  bestStreak: number
+  daysActive: number
+  totalWeightChange: number | null
+  weightToGoal: number | null
+  weeklyAvgCalories: number | null
+  weeklyAvgProtein: number | null
+}

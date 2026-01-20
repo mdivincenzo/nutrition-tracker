@@ -1,10 +1,11 @@
 'use client'
 
-import { Profile, Meal, Workout, WeighIn, DailyTotals } from '@/types'
+import { Profile, Meal, Workout, WeighIn, DailyTotals, HeroStats as HeroStatsType } from '@/types'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import MacroProgress from './MacroProgress'
 import MealsList from './MealsList'
+import HeroStats from './HeroStats'
 
 interface DashboardProps {
   profile: Profile
@@ -12,9 +13,10 @@ interface DashboardProps {
   workouts: Workout[]
   weighIn: WeighIn | null
   totals: DailyTotals
+  heroStats: HeroStatsType
 }
 
-export default function Dashboard({ profile, meals, workouts, weighIn, totals }: DashboardProps) {
+export default function Dashboard({ profile, meals, workouts, weighIn, totals, heroStats }: DashboardProps) {
   const router = useRouter()
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -50,28 +52,10 @@ export default function Dashboard({ profile, meals, workouts, weighIn, totals }:
         <p className="text-text-secondary mt-1">{today}</p>
       </header>
 
-      {/* Weight Section */}
-      {(weighIn || profile.start_weight) && (
-        <div className="mb-8 glass-card p-6">
-          <h2 className="text-sm font-medium text-text-secondary mb-3">Current Weight</h2>
-          <div className="flex items-baseline gap-4">
-            <span className="text-4xl font-semibold tracking-tight">
-              {weighIn?.weight || profile.start_weight}
-              <span className="text-lg text-text-secondary ml-1">lbs</span>
-            </span>
-            {profile.goal_weight && (
-              <span className="text-text-tertiary">
-                Goal: {profile.goal_weight} lbs
-              </span>
-            )}
-          </div>
-          {weighIn?.body_fat && (
-            <p className="text-text-secondary mt-2">
-              Body fat: <span className="text-text-primary">{weighIn.body_fat}%</span>
-            </p>
-          )}
-        </div>
-      )}
+      {/* Hero Stats */}
+      <div className="mb-8">
+        <HeroStats stats={heroStats} profile={profile} weighIn={weighIn} />
+      </div>
 
       {/* Macro Progress */}
       <div className="mb-8">

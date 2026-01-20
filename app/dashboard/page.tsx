@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Dashboard from '@/components/Dashboard'
 import Chat from '@/components/Chat'
+import { calculateHeroStats } from '@/lib/stats'
 
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient()
@@ -47,6 +48,9 @@ export default async function DashboardPage() {
   const workouts = workoutsResult.data || []
   const weighIn = weighInResult.data
 
+  // Calculate hero stats
+  const heroStats = await calculateHeroStats(profile.id, profile, supabase)
+
   const totals = meals.reduce(
     (acc, meal) => ({
       calories: acc.calories + (meal.calories || 0),
@@ -77,6 +81,7 @@ export default async function DashboardPage() {
             workouts={workouts}
             weighIn={weighIn}
             totals={totals}
+            heroStats={heroStats}
           />
         </div>
       </div>
