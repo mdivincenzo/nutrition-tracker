@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Profile } from '@/types'
+import { OnboardingProfile } from '@/lib/onboarding-tools'
+import { getInitialMessage } from '@/lib/onboarding-context'
 import ChatMessage from './ChatMessage'
-import { useRouter } from 'next/navigation'
 
-interface ChatProps {
-  profile: Profile
+interface OnboardingChatProps {
+  profile: OnboardingProfile
+  onProfileUpdate: (updates: Partial<OnboardingProfile>) => void
+  step: number
 }
 
 interface Message {
@@ -15,18 +17,27 @@ interface Message {
   content: string
 }
 
-export default function Chat({ profile }: ChatProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: `Hey ${profile.name}! I'm your nutrition coach. You can tell me what you ate, log workouts, record your weight, or ask me questions about your progress. What's on your mind?`,
-    },
-  ])
+export default function OnboardingChat({ profile, onProfileUpdate, step }: OnboardingChatProps) {
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
+  const initializedRef = useRef(false)
+
+  // Initialize with welcome message
+  useEffect(() => {
+    if (!initializedRef.current) {
+      initializedRef.current = true
+      const welcomeMessage = getInitialMessage(profile)
+      setMessages([
+        {
+          id: 'welcome',
+          role: 'assistant',
+          content: welcomeMessage,
+        },
+      ])
+    }
+  }, [profile])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -51,12 +62,20 @@ export default function Chat({ profile }: ChatProps) {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/chat', {
+      // Prepare chat history for API (exclude the welcome message ID since we send content)
+      const chatHistory = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }))
+
+      const response = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
-          profileId: profile.id,
+          profile,
+          step,
+          messages: chatHistory,
         }),
       })
 
@@ -90,8 +109,6 @@ export default function Chat({ profile }: ChatProps) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6)
             if (data === '[DONE]') {
-              // Refresh the dashboard data
-              router.refresh()
               continue
             }
             try {
@@ -105,6 +122,9 @@ export default function Chat({ profile }: ChatProps) {
                   )
                 )
               }
+              if (parsed.profileUpdate) {
+                onProfileUpdate(parsed.profileUpdate)
+              }
             } catch {
               // Ignore parse errors for incomplete chunks
             }
@@ -112,7 +132,7 @@ export default function Chat({ profile }: ChatProps) {
         }
       }
     } catch (error) {
-      console.error('Chat error:', error)
+      console.error('Onboarding chat error:', error)
       setMessages((prev) => [
         ...prev,
         {
@@ -127,13 +147,7 @@ export default function Chat({ profile }: ChatProps) {
   }
 
   return (
-    <>
-      {/* Header */}
-      <div className="p-6 border-b border-surface-border">
-        <h2 className="text-xl font-semibold tracking-tight">Chat with Claude</h2>
-        <p className="text-sm text-text-secondary mt-1">Log meals, workouts, and get coaching</p>
-      </div>
-
+    <div className="flex flex-col h-full">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.map((message) => (
@@ -160,7 +174,7 @@ export default function Chat({ profile }: ChatProps) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Tell me what you ate, or ask a question..."
+            placeholder="Type your message..."
             className="input-field"
             disabled={isLoading}
           />
@@ -173,6 +187,6 @@ export default function Chat({ profile }: ChatProps) {
           </button>
         </div>
       </form>
-    </>
+    </div>
   )
 }

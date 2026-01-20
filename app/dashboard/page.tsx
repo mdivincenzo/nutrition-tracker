@@ -58,10 +58,14 @@ export default async function DashboardPage() {
   )
 
   return (
-    <main className="min-h-screen bg-gray-900 text-white">
-      <div className="flex h-screen">
+    <main className="min-h-screen relative overflow-hidden">
+      {/* Background decorative elements */}
+      <div className="floating-orb purple w-96 h-96 -top-48 -left-48 opacity-10" />
+      <div className="floating-orb pink w-80 h-80 top-1/3 -right-40 opacity-10" />
+
+      <div className="flex h-screen relative z-10">
         {/* Chat Panel */}
-        <div className="w-1/2 border-r border-gray-700 flex flex-col">
+        <div className="w-1/2 border-r border-surface-border flex flex-col">
           <Chat profile={profile} />
         </div>
 

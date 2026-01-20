@@ -3,14 +3,7 @@ interface MacroProgressProps {
   current: number
   target: number
   unit: string
-  color: 'blue' | 'green' | 'yellow' | 'pink'
-}
-
-const colorClasses = {
-  blue: 'bg-blue-500',
-  green: 'bg-green-500',
-  yellow: 'bg-yellow-500',
-  pink: 'bg-pink-500',
+  color: 'indigo' | 'green' | 'yellow' | 'pink'
 }
 
 export default function MacroProgress({ label, current, target, unit, color }: MacroProgressProps) {
@@ -18,21 +11,25 @@ export default function MacroProgress({ label, current, target, unit, color }: M
   const remaining = target - current
 
   return (
-    <div className="bg-gray-800 rounded-lg p-3">
-      <div className="flex justify-between items-center mb-2">
+    <div className="glass-card p-4">
+      <div className="flex justify-between items-center mb-3">
         <span className="font-medium">{label}</span>
-        <span className="text-sm text-gray-400">
-          {Math.round(current)} / {target} {unit}
+        <span className="text-sm text-text-secondary">
+          <span className="text-text-primary font-medium">{Math.round(current)}</span> / {target} {unit}
         </span>
       </div>
-      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+      <div className="progress-bar">
         <div
-          className={`h-full ${colorClasses[color]} transition-all duration-300`}
+          className={`progress-bar-fill ${color}`}
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <div className="text-xs text-gray-500 mt-1">
-        {remaining > 0 ? `${Math.round(remaining)} ${unit} remaining` : 'Target reached!'}
+      <div className="text-xs text-text-tertiary mt-2">
+        {remaining > 0 ? (
+          `${Math.round(remaining)} ${unit} remaining`
+        ) : (
+          <span className="text-success">Target reached!</span>
+        )}
       </div>
     </div>
   )

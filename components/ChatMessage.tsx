@@ -12,13 +12,13 @@ export default function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`max-w-[80%] px-4 py-2 rounded-lg ${
+        className={`max-w-[80%] ${
           isUser
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-800 text-gray-100'
+            ? 'chat-bubble-user'
+            : 'chat-bubble-assistant'
         }`}
       >
-        <p className="whitespace-pre-wrap">{message.content}</p>
+        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
       </div>
     </div>
   )
