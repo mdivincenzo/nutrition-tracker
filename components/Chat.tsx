@@ -5,10 +5,25 @@ import { Profile } from '@/types'
 import ChatMessage from './ChatMessage'
 import { useRouter } from 'next/navigation'
 import { Cog6ToothIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import { useNavigation } from '@/lib/navigation-context'
+import { getContextualGreeting } from '@/lib/greeting'
+import { ProgressState } from '@/lib/progress-state'
+import ProgressCard from './dashboard/ProgressCard'
+
+interface TodayStats {
+  calories: number
+  protein: number
+  targetCalories: number
+  targetProtein: number
+}
 
 interface ChatProps {
   profile: Profile
   compactHeader?: boolean
+  onDataChanged?: () => void
+  todayStats?: TodayStats
+  progressState?: ProgressState
+  coachingInsights?: string[]
 }
 
 interface Message {
@@ -17,14 +32,60 @@ interface Message {
   content: string
 }
 
-export default function Chat({ profile, compactHeader = false }: ChatProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: `Hey ${profile.name}! I'm your nutrition coach. You can tell me what you ate, log workouts, record your weight, or ask me questions about your progress. What's on your mind?`,
-    },
-  ])
+export default function Chat({ profile, compactHeader = false, onDataChanged, todayStats, progressState, coachingInsights }: ChatProps) {
+  const { streak } = useNavigation()
+  const [messages, setMessages] = useState<Message[]>([])
+  const initializedRef = useRef(false)
+
+  // Get contextual placeholder based on progress state
+  const getPlaceholder = () => {
+    switch (progressState) {
+      case 'victory':
+        return 'Anything else on your mind?'
+      case 'almost':
+        return 'Want some dinner ideas?'
+      case 'struggling':
+        return 'Want to talk through tomorrow?'
+      case 'fresh-start':
+        return "What's your plan for today?"
+      default:
+        return 'Tell me what you ate...'
+    }
+  }
+
+  // Initialize greeting ONLY ONCE on mount
+  // Use ref to track initialization (persists across re-renders better than state)
+  useEffect(() => {
+    if (initializedRef.current) return
+    initializedRef.current = true
+
+    // If showing a progress card, start with empty messages
+    // The card IS the greeting
+    if (progressState && progressState !== 'on-track') {
+      return // Don't set any messages, the progress card is the greeting
+    }
+
+    // Only for 'on-track' state - add a greeting message
+    const greeting = todayStats
+      ? getContextualGreeting({
+          name: profile.name || 'there',
+          streak,
+          calories: todayStats.calories,
+          targetCalories: todayStats.targetCalories,
+          protein: todayStats.protein,
+          targetProtein: todayStats.targetProtein,
+        })
+      : `Hey ${profile.name || 'there'}! I'm your nutrition coach. What did you eat today?`
+
+    setMessages([
+      {
+        id: 'greeting',
+        role: 'assistant',
+        content: greeting,
+      },
+    ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Empty deps - only run once on mount
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -110,6 +171,7 @@ export default function Chat({ profile, compactHeader = false }: ChatProps) {
             if (data === '[DONE]') {
               // Refresh the dashboard data
               router.refresh()
+              onDataChanged?.()
               continue
             }
             try {
@@ -174,6 +236,20 @@ export default function Chat({ profile, compactHeader = false }: ChatProps) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Progress card - shows only when no conversation has started */}
+        {progressState && progressState !== 'on-track' && todayStats && messages.length === 0 && (
+          <ProgressCard
+            state={progressState}
+            name={profile.name || 'there'}
+            streak={streak}
+            calories={todayStats.calories}
+            targetCalories={todayStats.targetCalories}
+            protein={todayStats.protein}
+            targetProtein={todayStats.targetProtein}
+            coachingInsights={coachingInsights}
+          />
+        )}
+
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
@@ -193,14 +269,14 @@ export default function Chat({ profile, compactHeader = false }: ChatProps) {
 
       {/* Auto-expanding Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-surface-border">
-        <div className="relative">
+        <div className="flex items-end gap-3">
           <textarea
             ref={textareaRef}
             value={input}
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder="Tell me what you ate..."
-            className="input-field w-full resize-none pr-12 min-h-[44px] max-h-[120px]"
+            placeholder={getPlaceholder()}
+            className="input-field flex-1 resize-none min-h-[44px] max-h-[120px]"
             rows={1}
             disabled={isLoading}
             autoFocus
@@ -208,7 +284,7 @@ export default function Chat({ profile, compactHeader = false }: ChatProps) {
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="absolute right-2 bottom-2 p-2 text-accent-violet hover:bg-accent-violet/10 disabled:text-text-tertiary disabled:hover:bg-transparent rounded-lg transition-colors"
+            className="h-10 w-10 flex items-center justify-center flex-shrink-0 mb-[2px] text-accent-violet hover:bg-accent-violet/10 disabled:text-text-tertiary disabled:hover:bg-transparent rounded-lg transition-colors"
           >
             <PaperAirplaneIcon className="w-5 h-5" />
           </button>

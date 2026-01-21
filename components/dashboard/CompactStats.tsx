@@ -78,9 +78,8 @@ export default function CompactStats({ calories, protein, onTap }: CompactStatsP
             <div className="flex items-center gap-1.5">
               <span className="text-sm">🔥</span>
               <span className="text-sm font-medium">
-                {calories.current.toLocaleString()} / {calories.target.toLocaleString()}
+                {calories.current.toLocaleString()} / {calories.target.toLocaleString()} cal
               </span>
-              <span className="text-xs text-text-tertiary">cal</span>
               {caloriesReached && (
                 <span className="text-xs text-success ml-1">✓</span>
               )}
@@ -106,9 +105,8 @@ export default function CompactStats({ calories, protein, onTap }: CompactStatsP
             <div className="flex items-center gap-1.5">
               <span className="text-sm">💪</span>
               <span className="text-sm font-medium">
-                {protein.current}g / {protein.target}g
+                {protein.current} g / {protein.target} g
               </span>
-              <span className="text-xs text-text-tertiary">protein</span>
               {proteinReached && (
                 <span className="text-xs text-success ml-1">✓</span>
               )}
