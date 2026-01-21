@@ -10,6 +10,7 @@ import Chat from '@/components/Chat'
 import PerfectDayOverlay from '@/components/celebrations/PerfectDayOverlay'
 import { getProgressState } from '@/lib/progress-state'
 import { generateCoachingInsights } from '@/lib/coaching'
+import { getLocalDateString, isToday as checkIsToday } from '@/lib/date-utils'
 
 export default function LogPage() {
   const { selectedDate, refreshStreak, streak } = useNavigation()
@@ -25,11 +26,11 @@ export default function LogPage() {
   const prevStatsRef = useRef<{ hitCalories: boolean; hitProtein: boolean } | null>(null)
   const isInitialLoadRef = useRef(true)
 
-  // Check if viewing today
-  const isToday = selectedDate.toDateString() === new Date().toDateString()
+  // Check if viewing today (using local timezone)
+  const isToday = checkIsToday(selectedDate)
 
-  // Format date for query (YYYY-MM-DD)
-  const dateStr = selectedDate.toISOString().split('T')[0]
+  // Format date for query (YYYY-MM-DD) using LOCAL timezone
+  const dateStr = getLocalDateString(selectedDate)
 
   // Reset to initial load when date changes
   useEffect(() => {
@@ -69,7 +70,7 @@ export default function LogPage() {
       // Calculate yesterday's date
       const yesterday = new Date()
       yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = yesterday.toISOString().split('T')[0]
+      const yesterdayStr = getLocalDateString(yesterday)
 
       // Fetch meals, workouts for selected date, yesterday's meals, and last workout
       const [mealsResult, workoutsResult, yesterdayMealsResult, lastWorkoutResult] = await Promise.all([
@@ -173,7 +174,7 @@ export default function LogPage() {
 
     if (hitBoth && !wasHittingBoth) {
       // Check if we already celebrated today
-      const todayStr = new Date().toISOString().split('T')[0]
+      const todayStr = getLocalDateString()
       const celebratedKey = `celebrated_${todayStr}`
 
       if (!localStorage.getItem(celebratedKey)) {

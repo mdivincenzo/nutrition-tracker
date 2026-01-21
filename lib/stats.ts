@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Profile, HeroStats, Meal } from '@/types'
+import { getLocalDateString } from '@/lib/date-utils'
 
 interface DailyMealTotals {
   date: string
@@ -140,8 +141,10 @@ function calculateStreak(
   }
 
   // Calculate current streak (must include today or yesterday)
-  const today = new Date().toISOString().split('T')[0]
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  const today = getLocalDateString()
+  const yesterdayDate = new Date()
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+  const yesterday = getLocalDateString(yesterdayDate)
 
   let currentStreak = 0
 

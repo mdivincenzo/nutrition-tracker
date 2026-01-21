@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { SupabaseClient } from '@supabase/supabase-js'
+import { getLocalDateString } from '@/lib/date-utils'
 
 export interface OnboardingProfile {
   name: string | null
@@ -583,7 +584,7 @@ export async function saveOnboardingProfile(
       daily_protein: profile.daily_protein,
       daily_carbs: profile.daily_carbs,
       daily_fat: profile.daily_fat,
-      start_date: new Date().toISOString().split('T')[0],
+      start_date: getLocalDateString(),
       coaching_notes: noteParts.join('\n'),
     }, {
       onConflict: 'user_id',

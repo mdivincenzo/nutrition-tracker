@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { calculateStreak } from '@/lib/streak'
+import { getToday } from '@/lib/date-utils'
 
 interface NavigationContextType {
   selectedDate: Date
@@ -13,13 +14,6 @@ interface NavigationContextType {
 }
 
 const NavigationContext = createContext<NavigationContextType | null>(null)
-
-// Get today's date normalized to midnight
-const getToday = () => {
-  const now = new Date()
-  now.setHours(0, 0, 0, 0)
-  return now
-}
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   // Always start with TODAY's date - fresh on every mount/refresh

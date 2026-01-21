@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
+import { getLocalDateString } from '@/lib/date-utils'
 import TimeRangeSelector from '@/components/trends/TimeRangeSelector'
 import CalorieTrendChart from '@/components/trends/CalorieTrendChart'
 import ProteinTrendChart from '@/components/trends/ProteinTrendChart'
@@ -80,8 +81,8 @@ export default function TrendsPage() {
         .from('meals')
         .select('date, calories, protein, carbs, fat')
         .eq('profile_id', profileData.id)
-        .gte('date', startDate.toISOString().split('T')[0])
-        .lte('date', endDate.toISOString().split('T')[0])
+        .gte('date', getLocalDateString(startDate))
+        .lte('date', getLocalDateString(endDate))
 
       // Aggregate by date
       const dailyTotals = new Map<string, DailyData>()

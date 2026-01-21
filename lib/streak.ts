@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js'
+import { getLocalDateString } from '@/lib/date-utils'
 
 interface Profile {
   id: string
@@ -23,7 +24,7 @@ export async function calculateStreak(
     .from('meals')
     .select('date, calories, protein')
     .eq('profile_id', profile.id)
-    .gte('date', sixtyDaysAgo.toISOString().split('T')[0])
+    .gte('date', getLocalDateString(sixtyDaysAgo))
     .order('date', { ascending: false })
 
   if (error || !meals) return 0
@@ -46,7 +47,7 @@ export async function calculateStreak(
   for (let i = 0; i < 60; i++) {
     const checkDate = new Date(today)
     checkDate.setDate(checkDate.getDate() - i)
-    const dateStr = checkDate.toISOString().split('T')[0]
+    const dateStr = getLocalDateString(checkDate)
 
     const dayTotals = dailyTotals.get(dateStr)
 

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { SupabaseClient } from '@supabase/supabase-js'
+import { getLocalDateString } from '@/lib/date-utils'
 
 export const toolDefinitions: Anthropic.Tool[] = [
   // Logging Tools
@@ -276,7 +277,7 @@ export async function executeTool(
   profileId: string,
   supabase: SupabaseClient
 ): Promise<string> {
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateString()
 
   switch (name) {
     case 'log_meal': {

@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Profile, Meal, Workout, WeighIn, UserInsight, ChatMessage } from '@/types'
+import { getLocalDateString } from '@/lib/date-utils'
 
 interface ContextData {
   profile: Profile
@@ -17,8 +18,10 @@ export async function buildContext(
   profileId: string,
   supabase: SupabaseClient
 ): Promise<ContextData> {
-  const today = new Date().toISOString().split('T')[0]
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const today = getLocalDateString()
+  const weekAgoDate = new Date()
+  weekAgoDate.setDate(weekAgoDate.getDate() - 7)
+  const weekAgo = getLocalDateString(weekAgoDate)
 
   // Fetch all data in parallel
   const [
