@@ -14,8 +14,16 @@ interface NavigationContextType {
 
 const NavigationContext = createContext<NavigationContextType | null>(null)
 
+// Get today's date normalized to midnight
+const getToday = () => {
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  return now
+}
+
 export function NavigationProvider({ children }: { children: ReactNode }) {
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  // Always start with TODAY's date - fresh on every mount/refresh
+  const [selectedDate, setSelectedDate] = useState<Date>(() => getToday())
   const [streak, setStreak] = useState(0)
   const [earliestDate, setEarliestDate] = useState<Date | null>(null)
 
@@ -46,6 +54,26 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshStreak()
   }, [refreshStreak])
+
+  // Handle visibility change - update to new day when user returns to tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const today = getToday()
+        const selected = new Date(selectedDate)
+        selected.setHours(0, 0, 0, 0)
+
+        // If it's now a new day and selected is in the past, reset to today
+        if (selected.getTime() < today.getTime()) {
+          setSelectedDate(today)
+          refreshStreak()
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [selectedDate, refreshStreak])
 
   return (
     <NavigationContext.Provider value={{
