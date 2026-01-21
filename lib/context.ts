@@ -1,15 +1,12 @@
 import { SupabaseClient } from '@supabase/supabase-js'
-import { Profile, Meal, Workout, WeighIn, UserInsight, ChatMessage } from '@/types'
+import { Profile, WeighIn, UserInsight, ChatMessage } from '@/types'
 import { getLocalDateString } from '@/lib/date-utils'
+import { buildCoachingContext, CoachingContext } from '@/lib/coaching-context'
 
 interface ContextData {
   profile: Profile
-  todaysMeals: Meal[]
-  todaysWorkouts: Workout[]
+  coaching: CoachingContext
   todaysWeighIn: WeighIn | null
-  todaysTotals: { calories: number; protein: number; carbs: number; fat: number }
-  todaysCaloriesBurned: number
-  weekTotals: { calories: number; protein: number; carbs: number; fat: number; days: number }
   recentMessages: ChatMessage[]
   activeInsights: UserInsight[]
 }
@@ -19,111 +16,56 @@ export async function buildContext(
   supabase: SupabaseClient
 ): Promise<ContextData> {
   const today = getLocalDateString()
-  const weekAgoDate = new Date()
-  weekAgoDate.setDate(weekAgoDate.getDate() - 7)
-  const weekAgo = getLocalDateString(weekAgoDate)
 
-  // Fetch all data in parallel
+  // Build coaching context and fetch chat-specific data in parallel
   const [
-    profileResult,
-    todaysMealsResult,
-    todaysWorkoutsResult,
+    coaching,
     todaysWeighInResult,
-    weekMealsResult,
     messagesResult,
     insightsResult,
   ] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', profileId).single(),
-    supabase.from('meals').select('*').eq('profile_id', profileId).eq('date', today).order('created_at'),
-    supabase.from('workouts').select('*').eq('profile_id', profileId).eq('date', today),
+    buildCoachingContext(profileId, supabase),
     supabase.from('weigh_ins').select('*').eq('profile_id', profileId).eq('date', today).single(),
-    supabase.from('meals').select('date, calories, protein, carbs, fat').eq('profile_id', profileId).gte('date', weekAgo),
     supabase.from('chat_history').select('*').eq('profile_id', profileId).order('created_at', { ascending: false }).limit(10),
     supabase.from('user_insights').select('*').eq('profile_id', profileId).eq('active', true).order('updated_at', { ascending: false }).limit(20),
   ])
 
-  const profile = profileResult.data as Profile
-  const todaysMeals = (todaysMealsResult.data || []) as Meal[]
-  const todaysWorkouts = (todaysWorkoutsResult.data || []) as Workout[]
   const todaysWeighIn = todaysWeighInResult.data as WeighIn | null
-  const weekMeals = (weekMealsResult.data || []) as Meal[]
   const recentMessages = ((messagesResult.data || []) as ChatMessage[]).reverse()
   const activeInsights = (insightsResult.data || []) as UserInsight[]
 
-  // Calculate today's totals
-  const todaysTotals = todaysMeals.reduce(
-    (acc, meal) => ({
-      calories: acc.calories + (meal.calories || 0),
-      protein: acc.protein + (meal.protein || 0),
-      carbs: acc.carbs + (meal.carbs || 0),
-      fat: acc.fat + (meal.fat || 0),
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
-  )
-
-  // Calculate today's calories burned from workouts
-  const todaysCaloriesBurned = todaysWorkouts.reduce(
-    (total, workout) => total + (workout.calories_burned || 0),
-    0
-  )
-
-  // Calculate week totals (by day, then sum)
-  const dailyTotals: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {}
-  for (const meal of weekMeals) {
-    if (!dailyTotals[meal.date]) {
-      dailyTotals[meal.date] = { calories: 0, protein: 0, carbs: 0, fat: 0 }
-    }
-    dailyTotals[meal.date].calories += meal.calories || 0
-    dailyTotals[meal.date].protein += meal.protein || 0
-    dailyTotals[meal.date].carbs += meal.carbs || 0
-    dailyTotals[meal.date].fat += meal.fat || 0
-  }
-
-  const days = Object.keys(dailyTotals).length
-  const weekTotals = {
-    calories: Object.values(dailyTotals).reduce((s, d) => s + d.calories, 0),
-    protein: Object.values(dailyTotals).reduce((s, d) => s + d.protein, 0),
-    carbs: Object.values(dailyTotals).reduce((s, d) => s + d.carbs, 0),
-    fat: Object.values(dailyTotals).reduce((s, d) => s + d.fat, 0),
-    days,
-  }
-
   return {
-    profile,
-    todaysMeals,
-    todaysWorkouts,
+    profile: coaching.profile,
+    coaching,
     todaysWeighIn,
-    todaysTotals,
-    todaysCaloriesBurned,
-    weekTotals,
     recentMessages,
     activeInsights,
   }
 }
 
 export function buildSystemPrompt(context: ContextData): string {
-  const { profile, todaysMeals, todaysWorkouts, todaysWeighIn, todaysTotals, todaysCaloriesBurned, weekTotals, activeInsights } = context
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-  const hour = new Date().getHours()
-  const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
+  const { coaching, todaysWeighIn, activeInsights } = context
+  const { profile, today, yesterday, lastWeek } = coaching
+  const todayFormatted = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
-  // Calculate net calories available (50% credit for workout burn - conservative approach)
-  const dailyTarget = profile.daily_calories || 2000
-  const workoutCredit = Math.round(todaysCaloriesBurned * 0.5)
-  const netCaloriesAvailable = dailyTarget + workoutCredit
-  const caloriesRemaining = netCaloriesAvailable - todaysTotals.calories
-  const proteinRemaining = (profile.daily_protein || 150) - Math.round(todaysTotals.protein)
+  // Net calories with workout credit
+  const netCaloriesAvailable = coaching.targetCalories + today.workoutCredit
+  const caloriesRemaining = today.remaining.calories
+  const proteinRemaining = today.remaining.protein
+  const mealsRemaining = today.mealsRemaining || 1
 
-  // Determine meals remaining based on time of day
-  const mealsRemaining = hour < 12 ? 3 : hour < 17 ? 2 : 1
+  // Format yesterday's status
+  const yesterdayCalorieDiff = yesterday.calories - yesterday.targetCalories
+  const yesterdayStatus = yesterdayCalorieDiff > 100 ? `${yesterdayCalorieDiff} cal over` :
+                          yesterdayCalorieDiff < -100 ? `${Math.abs(yesterdayCalorieDiff)} cal under` : 'on target'
 
-  let prompt = `You are Macro, an elite nutrition coach. Your clients are serious about fitness - they want to understand the WHY, not just be told what to do. You sound like a coach worth paying for, not a chatbot.
+  let prompt = `You are Macro, an elite nutrition coach. You know this user's full history and coach them like a pro who's been working with them for weeks. You sound like a coach worth paying for, not a chatbot.
 
 ## THE DIFFERENCE BETWEEN YOU AND A CHATBOT
 
 **Chatbot:** "Protein is important. You need ${proteinRemaining}g more today."
 
-**You (Elite Coach):** "You're ${proteinRemaining}g short with ${mealsRemaining} meal${mealsRemaining > 1 ? 's' : ''} left. That's ${mealsRemaining > 1 ? 'doable but needs intention' : 'a lot to backload'} - aim for ${Math.round(proteinRemaining / mealsRemaining)}g+ ${mealsRemaining > 1 ? 'per meal' : 'at dinner'}. A double-protein Chipotle bowl or sashimi plate gets you 50-60g without the carb load."
+**You (Elite Coach):** "You're ${proteinRemaining}g short with ${mealsRemaining} meal${mealsRemaining > 1 ? 's' : ''} left. ${mealsRemaining > 1 ? 'Aim for ' + Math.round(proteinRemaining / mealsRemaining) + 'g+ per meal' : 'Make dinner protein-heavy'} - a double-protein Chipotle bowl or sashimi plate gets you 50-60g without the carb load."
 
 A real coach:
 1. **Connects to THEIR situation** (not generic advice)
@@ -132,48 +74,58 @@ A real coach:
 4. **Uses memorable frameworks** (mental models they can reuse)
 5. **Offers to go deeper** (doesn't just stop)
 
-## USER CONTEXT
+## USER PROFILE
 
-Today is ${today} (${timeOfDay}).
-
-### Profile
 - Name: ${profile.name}
-- Height: ${profile.height_inches ? `${Math.floor(profile.height_inches / 12)}'${profile.height_inches % 12}"` : 'Not set'}
-- Starting weight: ${profile.start_weight || 'Not set'} lbs
-- Goal weight: ${profile.goal_weight || 'Not set'} lbs
-- Starting body fat: ${profile.start_bf ? `${profile.start_bf}%` : 'Not set'}
-- Goal body fat: ${profile.goal_bf ? `${profile.goal_bf}%` : 'Not set'}
+- Goal: ${coaching.goal}
+- Current streak: ${coaching.streak} days
+- Daily targets: ${coaching.targetCalories} cal / ${coaching.targetProtein}g protein
+${profile.coaching_notes ? `- Notes: ${profile.coaching_notes}` : ''}
 
-### Daily Targets
-- Calories: ${dailyTarget} kcal
-- Protein: ${profile.daily_protein || 150}g
-- Carbs: ${profile.daily_carbs || 200}g
-- Fat: ${profile.daily_fat || 65}g
+## TODAY (${todayFormatted}, ${today.timeOfDay})
 
-${profile.coaching_notes ? `### Coaching Notes\n${profile.coaching_notes}\n` : ''}
+### Meals Logged
+${today.meals.length > 0
+  ? today.meals.map(m => `- ${m.name} (${m.time_of_day || 'meal'}): ${m.calories} cal, ${m.protein}g protein [ID: ${m.id}]`).join('\n')
+  : '- None yet'}
 
-### Today's Progress
-- **Calories**: ${todaysTotals.calories} / ${dailyTarget} (${caloriesRemaining} remaining)
-${todaysCaloriesBurned > 0 ? `- **Workout Burn**: ${todaysCaloriesBurned} cal → +${workoutCredit} cal credit (50% conservative)
-- **Net Available**: ${netCaloriesAvailable} cal` : ''}
-- **Protein**: ${Math.round(todaysTotals.protein)}g / ${profile.daily_protein || 150}g (${proteinRemaining}g remaining)
-- **Carbs**: ${Math.round(todaysTotals.carbs)}g / ${profile.daily_carbs || 200}g
-- **Fat**: ${Math.round(todaysTotals.fat)}g / ${profile.daily_fat || 65}g
+### Meal Status
+- Breakfast: ${today.mealsLogged.breakfast ? '✓ logged' : 'not yet'}
+- Lunch: ${today.mealsLogged.lunch ? '✓ logged' : 'not yet'}
+- Dinner: ${today.mealsLogged.dinner ? '✓ logged' : 'not yet'}
+${today.mealsLogged.snacks > 0 ? `- Snacks: ${today.mealsLogged.snacks} logged` : ''}
 
-${todaysMeals.length > 0 ? `### Today's Meals
-${todaysMeals.map(m => `- ${m.name} (${m.time_of_day || 'meal'}): ${m.calories} kcal, P:${m.protein}g C:${m.carbs}g F:${m.fat}g [ID: ${m.id}]`).join('\n')}` : 'No meals logged today yet.'}
+### Today's Totals
+- Calories: ${today.totals.calories} / ${coaching.targetCalories} (${caloriesRemaining} remaining)
+${today.caloriesBurned > 0 ? `- Workout burn: ${today.caloriesBurned} cal → +${today.workoutCredit} cal credit
+- Net available: ${netCaloriesAvailable} cal` : ''}
+- Protein: ${today.totals.protein}g / ${coaching.targetProtein}g (${proteinRemaining}g remaining)
+- Carbs: ${today.totals.carbs}g / ${coaching.targetCarbs}g
+- Fat: ${today.totals.fat}g / ${coaching.targetFat}g
 
-${todaysWorkouts.length > 0 ? `### Today's Workouts
-${todaysWorkouts.map(w => `- ${w.exercise}${w.type ? ` (${w.type})` : ''}${w.duration_minutes ? `: ${w.duration_minutes} min` : ''}${w.calories_burned ? ` (~${w.calories_burned} cal)` : ''}${w.sets && w.reps ? `: ${w.sets}x${w.reps}` : ''}`).join('\n')}` : ''}
+${today.workouts.length > 0 ? `### Today's Workouts
+${today.workouts.map(w => `- ${w.exercise}${w.type ? ` (${w.type})` : ''}${w.duration_minutes ? `: ${w.duration_minutes} min` : ''}${w.calories_burned ? ` (~${w.calories_burned} cal)` : ''}`).join('\n')}` : ''}
 
 ${todaysWeighIn ? `### Today's Weigh-in: ${todaysWeighIn.weight} lbs${todaysWeighIn.body_fat ? ` (${todaysWeighIn.body_fat}% BF)` : ''}` : ''}
 
-### This Week (Last 7 Days)
-${weekTotals.days > 0 ? `- Days tracked: ${weekTotals.days}
-- Average daily calories: ${Math.round(weekTotals.calories / weekTotals.days)}
-- Average daily protein: ${Math.round(weekTotals.protein / weekTotals.days)}g` : 'No data from the past week.'}
+## YESTERDAY (${yesterday.date})
 
-${activeInsights.length > 0 ? `### What I Remember About ${profile.name}
+- Calories: ${yesterday.calories} / ${yesterday.targetCalories} (${yesterdayStatus})
+- Protein: ${yesterday.protein}g / ${yesterday.targetProtein}g (${yesterday.hitProteinTarget ? 'hit' : 'missed'})
+- Workouts: ${yesterday.workouts.length > 0 ? yesterday.workouts.map(w => w.exercise).join(', ') : 'Rest day'}
+${yesterday.hitBothTargets ? '✓ Hit both targets' : ''}
+
+## LAST 7 DAYS
+
+- Days tracked: ${lastWeek.consistency.daysTracked}
+- Averages: ${lastWeek.averages.calories} cal, ${lastWeek.averages.protein}g protein
+- Consistency: ${lastWeek.consistency.daysHitBoth}/${lastWeek.consistency.daysTracked} days hit both targets
+- Workouts: ${lastWeek.consistency.workoutCount} sessions
+
+${lastWeek.patterns.length > 0 ? `### PATTERNS DETECTED
+${lastWeek.patterns.map(p => `- ${p}`).join('\n')}` : ''}
+
+${activeInsights.length > 0 ? `## WHAT I REMEMBER ABOUT ${profile.name?.toUpperCase()}
 ${activeInsights.map(i => `- [${i.category}] ${i.insight} [ID: ${i.id}]`).join('\n')}` : ''}
 
 ## RESPONSE STRUCTURE
