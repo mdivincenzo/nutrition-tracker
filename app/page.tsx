@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { OnboardingProfile, saveOnboardingProfile } from '@/lib/onboarding-tools'
@@ -43,6 +43,8 @@ export default function Home() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [hasSubmittedGoal, setHasSubmittedGoal] = useState(false)
   const [pendingGoalMessage, setPendingGoalMessage] = useState<string | null>(null)
+  const [adjustmentMode, setAdjustmentMode] = useState(false)
+  const isInitialMount = useRef(true)
   const router = useRouter()
   const { showToast } = useToast()
 
@@ -82,21 +84,55 @@ export default function Home() {
 
           // User is authenticated but no profile - check if we have onboarding data to save
           const stored = sessionStorage.getItem(STORAGE_KEY)
+          console.log('[Auth Debug] sessionStorage profile:', stored)
+          console.log('[Auth Debug] All cookies:', document.cookie)
+
           if (stored) {
             try {
               const storedProfile: OnboardingProfile = JSON.parse(stored)
+              console.log('[Auth Debug] Parsed profile - name:', storedProfile.name, 'calories:', storedProfile.daily_calories, 'protein:', storedProfile.daily_protein)
+
+              // Check for OAuth name cookie and merge if profile is missing name
+              if (!storedProfile.name) {
+                console.log('[Auth Debug] No name in profile, checking cookie...')
+                const cookies = document.cookie.split(';')
+                const nameCookie = cookies.find((c) => c.trim().startsWith('onboarding_name='))
+                console.log('[Auth Debug] Name cookie found:', nameCookie)
+                if (nameCookie) {
+                  const name = decodeURIComponent(nameCookie.split('=')[1])
+                  if (name) {
+                    storedProfile.name = name
+                    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(storedProfile))
+                    // Clear cookie after use
+                    document.cookie = 'onboarding_name=; path=/; max-age=0'
+                    console.log('[Auth Debug] Merged name from cookie:', name)
+                  }
+                }
+              }
+
               if (storedProfile.daily_calories && storedProfile.daily_protein && storedProfile.name) {
+                console.log('[Auth Debug] Profile complete, attempting save...')
                 // Auto-save the profile
                 const result = await saveOnboardingProfile(storedProfile, user.id, supabase)
+                console.log('[Auth Debug] Save result:', result)
                 if (result.success) {
                   sessionStorage.removeItem(STORAGE_KEY)
                   router.replace('/dashboard')
                   return
                 }
+              } else {
+                console.log('[Auth Debug] Profile incomplete - missing:',
+                  !storedProfile.daily_calories ? 'calories' : '',
+                  !storedProfile.daily_protein ? 'protein' : '',
+                  !storedProfile.name ? 'name' : ''
+                )
               }
-            } catch {
+            } catch (e) {
+              console.log('[Auth Debug] Parse error:', e)
               // Ignore parse errors, continue to onboarding
             }
+          } else {
+            console.log('[Auth Debug] No sessionStorage profile found')
           }
 
           // User is authenticated but needs to complete onboarding
@@ -168,6 +204,13 @@ export default function Home() {
   // Save profile to sessionStorage whenever it changes
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // Skip initial mount to avoid overwriting existing sessionStorage data
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
   }, [profile])
 
@@ -183,15 +226,25 @@ export default function Home() {
     profile.daily_fat
   )
 
-  // Auto-transition to plan view when recommendations are ready
+  // Auto-transition to plan view when recommendations first become ready
+  const hadRecommendations = useRef(hasRecommendations)
   useEffect(() => {
-    if (hasRecommendations && !showPlan) {
+    // Only auto-show plan when recommendations FIRST appear (or update in adjustment mode)
+    if (hasRecommendations && !hadRecommendations.current) {
       setShowPlan(true)
+      setAdjustmentMode(false)
     }
-  }, [hasRecommendations, showPlan])
+    hadRecommendations.current = hasRecommendations
+  }, [hasRecommendations])
 
   const handleBack = () => {
+    setAdjustmentMode(true)
     setShowPlan(false)
+  }
+
+  const handleAdjustmentComplete = () => {
+    setAdjustmentMode(false)
+    setShowPlan(true)
   }
 
   const handleGoalSubmit = (goalText: string) => {
@@ -256,6 +309,8 @@ export default function Home() {
               step={1}
               initialGoalMessage={pendingGoalMessage}
               onGoalMessageSent={() => setPendingGoalMessage(null)}
+              adjustmentMode={adjustmentMode}
+              onAdjustmentComplete={handleAdjustmentComplete}
             />
           </div>
         ) : (

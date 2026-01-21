@@ -13,6 +13,8 @@ interface OnboardingChatProps {
   step: number
   initialGoalMessage?: string | null
   onGoalMessageSent?: () => void
+  adjustmentMode?: boolean
+  onAdjustmentComplete?: () => void
 }
 
 interface Message {
@@ -34,16 +36,21 @@ export default function OnboardingChat({
   onProfileUpdate,
   step,
   initialGoalMessage,
-  onGoalMessageSent
+  onGoalMessageSent,
+  adjustmentMode = false,
+  onAdjustmentComplete
 }: OnboardingChatProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isTransitioning, setIsTransitioning] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const initializedRef = useRef(false)
   const profileRef = useRef(profile)
   const goalMessageSentRef = useRef(false)
+  const adjustmentMessageSentRef = useRef(false)
+  const shouldAutoTransitionRef = useRef(false)
 
   // Keep profile ref updated
   useEffect(() => {
@@ -84,6 +91,15 @@ export default function OnboardingChat({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialGoalMessage, onGoalMessageSent])
+
+  // Auto-send adjustment message when entering adjustment mode
+  useEffect(() => {
+    if (adjustmentMode && !adjustmentMessageSentRef.current && initializedRef.current) {
+      adjustmentMessageSentRef.current = true
+      sendMessage("I'd like to adjust my nutrition targets")
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adjustmentMode])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -169,6 +185,10 @@ export default function OnboardingChat({
               }
               if (parsed.profileUpdate) {
                 onProfileUpdate(parsed.profileUpdate)
+                // In adjustment mode, auto-transition when macros are updated
+                if (adjustmentMode && parsed.profileUpdate.daily_calories) {
+                  shouldAutoTransitionRef.current = true
+                }
               }
             } catch {
               // Ignore parse errors for incomplete chunks
@@ -188,8 +208,18 @@ export default function OnboardingChat({
       ])
     } finally {
       setIsLoading(false)
-      // Refocus input for continuous typing
-      setTimeout(() => inputRef.current?.focus(), 0)
+
+      // Handle auto-transition in adjustment mode
+      if (shouldAutoTransitionRef.current) {
+        shouldAutoTransitionRef.current = false
+        setIsTransitioning(true)
+        setTimeout(() => {
+          onAdjustmentComplete?.()
+        }, 800)
+      } else {
+        // Refocus input for continuous typing
+        setTimeout(() => inputRef.current?.focus(), 0)
+      }
     }
   }
 
@@ -218,6 +248,12 @@ export default function OnboardingChat({
 
   // Dynamic headline based on step
   const getHeadline = (): string => {
+    if (isTransitioning) {
+      return 'Updating your plan...'
+    }
+    if (adjustmentMode) {
+      return 'Adjusting your plan'
+    }
     const currentStep = getCurrentStep()
     switch (currentStep) {
       case 'goal':
@@ -237,6 +273,9 @@ export default function OnboardingChat({
 
   // Contextual hint text below input
   const getHint = (): string => {
+    if (adjustmentMode) {
+      return 'Example: "I want more protein" or "Lower my calories"'
+    }
     const currentStep = getCurrentStep()
     switch (currentStep) {
       case 'goal':
@@ -254,6 +293,7 @@ export default function OnboardingChat({
 
   // Get contextual placeholder based on what info is needed next
   const getPlaceholder = (): string => {
+    if (adjustmentMode) return "What would you like to change?"
     if (!profile.goal) return "Tell me about your fitness goal..."
     if (!hasStats) return "Age, sex, height, and weight..."
     if (!profile.activity_level) return "Type or pick below..."
@@ -261,18 +301,20 @@ export default function OnboardingChat({
     return "Type a message..."
   }
 
-  // Show activity chips when on activity step
-  const showActivityChips = hasStats && !profile.activity_level
+  // Show activity chips when on activity step (not in adjustment mode)
+  const showActivityChips = !adjustmentMode && hasStats && !profile.activity_level
 
   return (
     <div className="flex flex-col h-full">
-      {/* Progress indicator */}
-      <div className="px-6 pt-6">
-        <OnboardingProgress currentStep={getCurrentStep()} />
-      </div>
+      {/* Progress indicator (hide in adjustment mode) */}
+      {!adjustmentMode && (
+        <div className="px-6 pt-6">
+          <OnboardingProgress currentStep={getCurrentStep()} />
+        </div>
+      )}
 
       {/* Dynamic headline */}
-      <div className="text-center py-4">
+      <div className={`text-center py-4 ${adjustmentMode ? 'pt-6' : ''}`}>
         <h2 className="text-xl font-semibold text-text-secondary">
           {getHeadline()}
         </h2>

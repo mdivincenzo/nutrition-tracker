@@ -52,6 +52,21 @@ export default function SignUp() {
     if (stored && data.user) {
       try {
         const profile: OnboardingProfile = JSON.parse(stored)
+
+        // Check for OAuth name cookie and merge if profile is missing name
+        if (!profile.name) {
+          const cookies = document.cookie.split(';')
+          const nameCookie = cookies.find((c) => c.trim().startsWith('onboarding_name='))
+          if (nameCookie) {
+            const name = decodeURIComponent(nameCookie.split('=')[1])
+            if (name) {
+              profile.name = name
+              sessionStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
+              document.cookie = 'onboarding_name=; path=/; max-age=0'
+            }
+          }
+        }
+
         // Only save if we have complete onboarding data
         if (profile.daily_calories && profile.daily_protein && profile.name) {
           const result = await saveOnboardingProfile(profile, data.user.id, supabase)

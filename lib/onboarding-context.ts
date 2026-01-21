@@ -65,7 +65,7 @@ You have everything! Now calculate their personalized recommendations using calc
 
 Greet them by name and present their plan!
 ` : `
-### Recommendations Set
+### Recommendations Set (Adjustment Mode)
 Current plan for ${profile.name}:
 - Daily calories: ${profile.daily_calories} kcal
 - Protein: ${profile.daily_protein}g
@@ -74,7 +74,7 @@ Current plan for ${profile.name}:
 ${profile.tdee ? `- TDEE: ${profile.tdee}` : ''}
 ${profile.bmr ? `- BMR: ${profile.bmr}` : ''}
 
-The user can adjust the plan using the "More Aggressive" or "More Conservative" buttons, or ask questions about the plan.
+The user wants to adjust their plan. Ask what they'd like to change (more/less calories, more protein, etc.). If their request is clear, make the adjustment using set_recommendations. If unclear, ask a clarifying question. Keep responses brief.
 `}
 
 ## Guidelines
@@ -85,7 +85,7 @@ The user can adjust the plan using the "More Aggressive" or "More Conservative" 
 - For maintenance: use TDEE
 - For muscle gain: use a moderate surplus (300-400 calories above TDEE)
 - Explain the plan briefly - users can see the numbers in the Plan Card
-- When they're ready, encourage them to click "See Your Plan" to continue
+- After setting recommendations, the UI will automatically transition to show the plan
 
 ## Activity Level Reference
 - sedentary: 1.2x BMR
