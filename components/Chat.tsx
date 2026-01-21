@@ -4,9 +4,11 @@ import { useState, useRef, useEffect } from 'react'
 import { Profile } from '@/types'
 import ChatMessage from './ChatMessage'
 import { useRouter } from 'next/navigation'
+import { Cog6ToothIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 
 interface ChatProps {
   profile: Profile
+  compactHeader?: boolean
 }
 
 interface Message {
@@ -15,7 +17,7 @@ interface Message {
   content: string
 }
 
-export default function Chat({ profile }: ChatProps) {
+export default function Chat({ profile, compactHeader = false }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -26,8 +28,23 @@ export default function Chat({ profile }: ChatProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
+
+  // Auto-resize textarea
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target
+    textarea.style.height = 'auto'
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'
+    setInput(textarea.value)
+  }
+
+  // Reset textarea height on submit
+  const resetTextareaHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+    }
+  }
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -124,21 +141,39 @@ export default function Chat({ profile }: ChatProps) {
       ])
     } finally {
       setIsLoading(false)
+      resetTextareaHeight()
       // Refocus input for continuous typing
-      setTimeout(() => inputRef.current?.focus(), 0)
+      setTimeout(() => textareaRef.current?.focus(), 0)
+    }
+  }
+
+  // Handle Enter key (submit on Enter, new line on Shift+Enter)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit(e as unknown as React.FormEvent)
     }
   }
 
   return (
     <>
       {/* Header */}
-      <div className="p-6 border-b border-surface-border">
-        <h2 className="text-xl font-semibold tracking-tight">Chat with Claude</h2>
-        <p className="text-sm text-text-secondary mt-1">Log meals, workouts, and get coaching</p>
-      </div>
+      {!compactHeader && (
+        <div className="p-4 border-b border-surface-border flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">Macro</h1>
+          </div>
+          <button
+            className="p-2 text-text-tertiary hover:text-text-secondary transition-colors rounded-lg hover:bg-surface"
+            title="Settings"
+          >
+            <Cog6ToothIcon className="w-5 h-5" />
+          </button>
+        </div>
+      )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
@@ -156,25 +191,26 @@ export default function Chat({ profile }: ChatProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="p-6 border-t border-surface-border">
-        <div className="flex gap-3">
-          <input
-            ref={inputRef}
-            type="text"
+      {/* Auto-expanding Input */}
+      <form onSubmit={handleSubmit} className="p-4 border-t border-surface-border">
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Tell me what you ate, or ask a question..."
-            className="input-field"
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Tell me what you ate..."
+            className="input-field w-full resize-none pr-12 min-h-[44px] max-h-[120px]"
+            rows={1}
             disabled={isLoading}
             autoFocus
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="btn-primary px-6 whitespace-nowrap"
+            className="absolute right-2 bottom-2 p-2 text-accent-violet hover:bg-accent-violet/10 disabled:text-text-tertiary disabled:hover:bg-transparent rounded-lg transition-colors"
           >
-            Send
+            <PaperAirplaneIcon className="w-5 h-5" />
           </button>
         </div>
       </form>

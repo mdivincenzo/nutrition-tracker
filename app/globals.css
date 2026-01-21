@@ -787,6 +787,50 @@
   animation: slideDown 0.3s ease-out;
 }
 
+/* ========================================
+   BOTTOM SHEET
+   ======================================== */
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Safe area padding for bottom sheet content */
+.pb-safe {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+/* ========================================
+   GOAL CELEBRATION
+   ======================================== */
+
+@keyframes goalPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(52, 211, 153, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+  }
+}
+
+.goal-pulse {
+  animation: goalPulse 0.6s ease-out;
+}
+
 /* Utility classes */
 @layer utilities {
   .animate-float {

@@ -1,8 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
-import Dashboard from '@/components/Dashboard'
-import Chat from '@/components/Chat'
-import { calculateHeroStats } from '@/lib/stats'
+import DashboardLayout from '@/components/dashboard/DashboardLayout'
 
 interface DashboardPageProps {
   searchParams: { date?: string }
@@ -29,7 +27,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const today = new Date().toISOString().split('T')[0]
   const selectedDate = searchParams.date || today
 
-  const [mealsResult, workoutsResult, weighInResult] = await Promise.all([
+  const [mealsResult, workoutsResult] = await Promise.all([
     supabase
       .from('meals')
       .select('*')
@@ -41,20 +39,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       .select('*')
       .eq('profile_id', profile.id)
       .eq('date', selectedDate),
-    supabase
-      .from('weigh_ins')
-      .select('*')
-      .eq('profile_id', profile.id)
-      .eq('date', selectedDate)
-      .single(),
   ])
 
   const meals = mealsResult.data || []
   const workouts = workoutsResult.data || []
-  const weighIn = weighInResult.data
-
-  // Calculate hero stats
-  const heroStats = await calculateHeroStats(profile.id, profile, supabase)
 
   const totals = meals.reduce(
     (acc, meal) => ({
@@ -67,29 +55,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   )
 
   return (
-    <main className="min-h-screen relative overflow-hidden">
+    <main className="h-screen relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="floating-orb purple w-96 h-96 -top-48 -left-48 opacity-10" />
       <div className="floating-orb pink w-80 h-80 top-1/3 -right-40 opacity-10" />
 
-      <div className="flex h-screen relative z-10">
-        {/* Chat Panel */}
-        <div className="w-1/2 border-r border-surface-border flex flex-col">
-          <Chat profile={profile} />
-        </div>
-
-        {/* Dashboard Panel */}
-        <div className="w-1/2 overflow-y-auto">
-          <Dashboard
-            profile={profile}
-            meals={meals}
-            workouts={workouts}
-            weighIn={weighIn}
-            totals={totals}
-            heroStats={heroStats}
-            selectedDate={selectedDate}
-          />
-        </div>
+      <div className="relative z-10 h-full">
+        <DashboardLayout
+          profile={profile}
+          meals={meals}
+          workouts={workouts}
+          totals={totals}
+          selectedDate={selectedDate}
+        />
       </div>
     </main>
   )
