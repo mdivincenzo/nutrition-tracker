@@ -9,6 +9,8 @@ import { useNavigation } from '@/lib/navigation-context'
 import { getContextualGreeting } from '@/lib/greeting'
 import { ProgressState } from '@/lib/progress-state'
 import ProgressCard from './dashboard/ProgressCard'
+import { createClient } from '@/lib/supabase'
+import { getLocalDateString } from '@/lib/date-utils'
 
 interface TodayStats {
   calories: number
@@ -33,9 +35,11 @@ interface Message {
 }
 
 export default function Chat({ profile, compactHeader = false, onDataChanged, todayStats, progressState, coachingInsights }: ChatProps) {
-  const { streak } = useNavigation()
+  const { streak, selectedDate } = useNavigation()
   const [messages, setMessages] = useState<Message[]>([])
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true)
   const initializedRef = useRef(false)
+  const loadedDateRef = useRef<string | null>(null)
 
   // Get contextual placeholder based on progress state
   const getPlaceholder = () => {
@@ -53,10 +57,74 @@ export default function Chat({ profile, compactHeader = false, onDataChanged, to
     }
   }
 
-  // Initialize greeting ONLY ONCE on mount
-  // Use ref to track initialization (persists across re-renders better than state)
+  // Reset state when date changes
   useEffect(() => {
+    const dateStr = getLocalDateString(selectedDate)
+    if (loadedDateRef.current && loadedDateRef.current !== dateStr) {
+      // Date changed - reset state for new date
+      setMessages([])
+      initializedRef.current = false
+      loadedDateRef.current = null
+    }
+  }, [selectedDate])
+
+  // Load today's messages from database
+  useEffect(() => {
+    const loadTodayMessages = async () => {
+      if (!profile?.id) return
+
+      const dateStr = getLocalDateString(selectedDate)
+
+      // Skip if we already loaded messages for this date
+      if (loadedDateRef.current === dateStr) return
+      loadedDateRef.current = dateStr
+
+      setIsLoadingMessages(true)
+      const supabase = createClient()
+
+      // Get start and end of the selected day in UTC
+      const startOfDay = new Date(dateStr + 'T00:00:00')
+      const endOfDay = new Date(dateStr + 'T23:59:59.999')
+
+      const { data: savedMessages, error } = await supabase
+        .from('chat_history')
+        .select('id, role, content, created_at')
+        .eq('profile_id', profile.id)
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('Error loading messages:', error)
+        setIsLoadingMessages(false)
+        return
+      }
+
+      if (savedMessages && savedMessages.length > 0) {
+        setMessages(savedMessages.map(m => ({
+          id: m.id,
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })))
+        initializedRef.current = true
+      } else {
+        // No saved messages - show greeting if on-track, or empty for progress card
+        setMessages([])
+        initializedRef.current = false
+      }
+
+      setIsLoadingMessages(false)
+    }
+
+    loadTodayMessages()
+  }, [profile?.id, selectedDate])
+
+  // Initialize greeting after messages load (if no saved messages)
+  useEffect(() => {
+    if (isLoadingMessages) return
     if (initializedRef.current) return
+    if (messages.length > 0) return
+
     initializedRef.current = true
 
     // If showing a progress card, start with empty messages
@@ -84,8 +152,7 @@ export default function Chat({ profile, compactHeader = false, onDataChanged, to
         content: greeting,
       },
     ])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Empty deps - only run once on mount
+  }, [isLoadingMessages, messages.length, progressState, todayStats, profile.name, streak])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -236,8 +303,19 @@ export default function Chat({ profile, compactHeader = false, onDataChanged, to
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Loading state */}
+        {isLoadingMessages && (
+          <div className="flex justify-center py-8">
+            <div className="loading-dots">
+              <div className="loading-dot" />
+              <div className="loading-dot" />
+              <div className="loading-dot" />
+            </div>
+          </div>
+        )}
+
         {/* Progress card - shows only when no conversation has started */}
-        {progressState && progressState !== 'on-track' && todayStats && messages.length === 0 && (
+        {!isLoadingMessages && progressState && progressState !== 'on-track' && todayStats && messages.length === 0 && (
           <ProgressCard
             state={progressState}
             name={profile.name || 'there'}
@@ -250,10 +328,10 @@ export default function Chat({ profile, compactHeader = false, onDataChanged, to
           />
         )}
 
-        {messages.map((message) => (
+        {!isLoadingMessages && messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
-        {isLoading && messages[messages.length - 1]?.role === 'user' && (
+        {!isLoadingMessages && isLoading && messages[messages.length - 1]?.role === 'user' && (
           <div className="flex justify-start">
             <div className="chat-bubble-assistant">
               <div className="loading-dots">
