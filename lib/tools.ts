@@ -281,11 +281,12 @@ export async function executeTool(
 
   switch (name) {
     case 'log_meal': {
+      const mealDate = (input.date as string) || today
       const { data, error } = await supabase
         .from('meals')
         .insert({
           profile_id: profileId,
-          date: (input.date as string) || today,
+          date: mealDate,
           name: input.name,
           time_of_day: input.time_of_day,
           calories: input.calories,
@@ -298,7 +299,33 @@ export async function executeTool(
         .single()
 
       if (error) return `Error logging meal: ${error.message}`
-      return `Meal logged: ${input.name} (${input.calories} kcal, P:${input.protein}g C:${input.carbs}g F:${input.fat}g)`
+
+      // Fetch updated daily totals so Claude has accurate numbers
+      const { data: todaysMeals } = await supabase
+        .from('meals')
+        .select('calories, protein, carbs, fat')
+        .eq('profile_id', profileId)
+        .eq('date', mealDate)
+
+      const totals = (todaysMeals || []).reduce(
+        (acc, m) => ({
+          calories: acc.calories + (m.calories || 0),
+          protein: acc.protein + (m.protein || 0),
+          carbs: acc.carbs + (m.carbs || 0),
+          fat: acc.fat + (m.fat || 0),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      )
+
+      return `Meal logged: ${input.name} (${input.calories} kcal, P:${input.protein}g C:${input.carbs}g F:${input.fat}g)
+
+UPDATED DAILY TOTALS for ${mealDate}:
+- Calories: ${totals.calories}
+- Protein: ${totals.protein}g
+- Carbs: ${totals.carbs}g
+- Fat: ${totals.fat}g
+
+USE THESE EXACT TOTALS in your response. Do not estimate different values.`
     }
 
     case 'log_workout': {
