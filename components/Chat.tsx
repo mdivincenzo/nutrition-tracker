@@ -4,13 +4,30 @@ import { useState, useRef, useEffect } from 'react'
 import { Profile } from '@/types'
 import ChatMessage from './ChatMessage'
 import { useRouter } from 'next/navigation'
-import { Cog6ToothIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import { Cog6ToothIcon, PaperAirplaneIcon, CameraIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useNavigation } from '@/lib/navigation-context'
 import { getContextualGreeting } from '@/lib/greeting'
 import { ProgressState } from '@/lib/progress-state'
 import ProgressCard from './dashboard/ProgressCard'
 import { createClient } from '@/lib/supabase'
 import { getLocalDateString } from '@/lib/date-utils'
+
+// Supported image types for meal photos
+const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_FILE_SIZE = 4 * 1024 * 1024 // 4MB
+
+// Convert file to base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1]
+      resolve(base64)
+    }
+    reader.onerror = reject
+  })
+}
 
 interface TodayStats {
   calories: number
@@ -155,9 +172,49 @@ export default function Chat({ profile, compactHeader = false, onDataChanged, to
   }, [isLoadingMessages, messages.length, progressState, todayStats, profile.name, streak])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<{ base64: string; mimeType: string; preview: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  // Handle image selection
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!SUPPORTED_IMAGE_TYPES.includes(file.type)) {
+      alert('Please select a JPEG, PNG, or WebP image.')
+      return
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      alert('Image must be less than 4MB.')
+      return
+    }
+
+    try {
+      const base64 = await fileToBase64(file)
+      const preview = URL.createObjectURL(file)
+      setSelectedImage({ base64, mimeType: file.type, preview })
+    } catch (error) {
+      console.error('Error reading file:', error)
+      alert('Error reading image. Please try again.')
+    }
+  }
+
+  // Clear selected image
+  const clearImage = () => {
+    if (selectedImage?.preview) {
+      URL.revokeObjectURL(selectedImage.preview)
+    }
+    setSelectedImage(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   // Auto-resize textarea
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -184,25 +241,36 @@ export default function Chat({ profile, compactHeader = false, onDataChanged, to
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if ((!input.trim() && !selectedImage) || isLoading) return
 
+    const messageContent = input.trim() || (selectedImage ? "What's in this meal? Log it for me." : '')
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input.trim(),
+      content: messageContent,
     }
+
+    // Store image data before clearing
+    const imageData = selectedImage ? { base64: selectedImage.base64, mimeType: selectedImage.mimeType } : undefined
 
     setMessages((prev) => [...prev, userMessage])
     setInput('')
+    clearImage()
     setIsLoading(true)
 
     try {
+      // Debug: Log what we're sending
+      console.log('=== CHAT SENDING ===')
+      console.log('Message:', userMessage.content)
+      console.log('Image data:', imageData ? `Yes (${imageData.mimeType}, ${imageData.base64.length} chars)` : 'No')
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
           profileId: profile.id,
+          image: imageData,
         }),
       })
 
@@ -347,7 +415,43 @@ export default function Chat({ profile, compactHeader = false, onDataChanged, to
 
       {/* Auto-expanding Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-surface-border">
+        {/* Image preview */}
+        {selectedImage && (
+          <div className="mb-3 relative inline-block">
+            <img
+              src={selectedImage.preview}
+              alt="Selected meal"
+              className="h-20 w-auto rounded-lg object-cover"
+            />
+            <button
+              type="button"
+              onClick={clearImage}
+              className="absolute -top-2 -right-2 p-1 bg-surface-hover rounded-full text-text-secondary hover:text-text-primary"
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         <div className="flex items-end gap-3">
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/jpeg,image/png,image/webp"
+            capture="environment"
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+          {/* Camera button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="h-10 w-10 flex items-center justify-center flex-shrink-0 mb-[2px] text-text-secondary hover:text-accent-violet hover:bg-accent-violet/10 disabled:text-text-tertiary disabled:hover:bg-transparent rounded-lg transition-colors"
+            title="Upload meal photo"
+          >
+            <CameraIcon className="w-5 h-5" />
+          </button>
           <textarea
             ref={textareaRef}
             value={input}
@@ -361,7 +465,7 @@ export default function Chat({ profile, compactHeader = false, onDataChanged, to
           />
           <button
             type="submit"
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || (!input.trim() && !selectedImage)}
             className="h-10 w-10 flex items-center justify-center flex-shrink-0 mb-[2px] text-accent-violet hover:bg-accent-violet/10 disabled:text-text-tertiary disabled:hover:bg-transparent rounded-lg transition-colors"
           >
             <PaperAirplaneIcon className="w-5 h-5" />

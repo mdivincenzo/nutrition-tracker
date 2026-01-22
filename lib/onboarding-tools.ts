@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { getLocalDateString } from '@/lib/date-utils'
 
@@ -23,7 +22,8 @@ export interface OnboardingProfile {
   bmr: number | null
 }
 
-export const onboardingToolDefinitions: Anthropic.Tool[] = [
+// Tool definitions kept for reference (now defined inline in onboarding route with Gemini format)
+export const onboardingToolDefinitions = [
   {
     name: 'update_profile_field',
     description: 'Update a single field in the user\'s profile. Use this to save information as the user shares it.',

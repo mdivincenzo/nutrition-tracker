@@ -1,8 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { getLocalDateString } from '@/lib/date-utils'
 
-export const toolDefinitions: Anthropic.Tool[] = [
+// Tool definitions kept for reference (no longer used with Gemini migration)
+// The chat route now uses structured output instead of function calling
+export const toolDefinitions = [
   // Logging Tools
   {
     name: 'log_meal',
